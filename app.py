@@ -2,30 +2,32 @@ import streamlit as st
 import time
 from datetime import datetime, timedelta
 
-# --- 1. CONFIG & THEME ---
-st.set_page_config(page_title="BP Market", page_icon="🇵🇭")
+# --- 1. CONFIG & MOBILE SCROLL FIX ---
+st.set_page_config(page_title="BP Market", page_icon="🇵🇭", layout="centered")
+
+# CSS to force scrolling on mobile devices
 st.markdown("""
 <style>
-    .stApp { margin-top: 20px; }
+    .main .block-container { max-width: 95%; padding-bottom: 100px; }
     input[type="text"] { text-transform: uppercase; }
-    .stButton>button { width: 100%; border-radius: 12px; height: 3.5em; background-color: #0038a8; color: white; font-weight: bold; border: none; }
-    .logo-text { text-align: center; color: #0038a8; font-weight: 900; font-size: 2.2em; line-height: 1.2; }
-    .info-box { background-color: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #0038a8; margin-bottom: 15px; }
-    .owner-card { background-color: #f1f5f9; padding: 10px; border-radius: 8px; border-left: 5px solid #0038a8; margin-bottom: 10px; }
+    .stButton>button { width: 100%; border-radius: 12px; height: 3.5em; background-color: #0038a8; color: white; font-weight: bold; }
+    .logo-text { text-align: center; color: #0038a8; font-weight: 900; font-size: 2em; }
+    .info-box { background-color: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #0038a8; margin-bottom: 20px; }
+    .owner-card { background-color: #f1f5f9; padding: 12px; border-radius: 8px; border-left: 5px solid #0038a8; margin-bottom: 15px; }
 </style>
 """, unsafe_allow_html=True)
 
 # --- 2. LOGO ---
-st.markdown('<p class="logo-text">🇵🇭 BAGONG<br>PILIPINAS</p>', unsafe_allow_html=True)
+st.markdown('<p class="logo-text">🇵🇭 BAGONG PILIPINAS</p>', unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #64748b; font-weight: bold;'>AUTHORIZED STOCK MARKET PORTAL</p>", unsafe_allow_html=True)
 
-# --- 3. SESSION STATE ---
+# --- 3. DATABASE ---
 if 'page' not in st.session_state: st.session_state.page = "login"
 if 'users_db' not in st.session_state: st.session_state.users_db = []
 if 'current_user' not in st.session_state: st.session_state.current_user = None
 if 'pending_deposits' not in st.session_state: st.session_state.pending_deposits = []
 
-# --- 4. LOGIN PAGE ---
+# --- 4. LOGIN ---
 if st.session_state.page == "login":
     st.subheader("LOGIN")
     l_name = st.text_input("FULL NAME").upper()
@@ -47,47 +49,49 @@ if st.session_state.page == "login":
         st.session_state.page = "signup"
         st.rerun()
 
-# --- 5. SIGN UP PAGE ---
+# --- 5. SIGN UP ---
 elif st.session_state.page == "signup":
     st.subheader("CREATE ACCOUNT")
     reg_name = st.text_input("FULL NAME").upper()
     pin1 = st.text_input("CREATE 6-DIGIT PIN", type="password", max_chars=6)
-    
     if st.button("COMPLETE REGISTRATION"):
         if reg_name and len(pin1) == 6:
             st.session_state.users_db.append({"name": reg_name, "pin": pin1, "investments": []})
-            st.success("✅ SUCCESS! PLEASE LOGIN.")
+            st.success("✅ REGISTERED!")
             time.sleep(1)
             st.session_state.page = "login"
             st.rerun()
 
-# --- 6. OWNER ADMIN DASHBOARD ---
+# --- 6. OWNER ADMIN ---
 elif st.session_state.page == "admin":
     st.subheader("👑 OWNER DASHBOARD")
     
-    tab1, tab2 = st.tabs(["👥 INVESTOR LIST", "📥 PENDING APPROVALS"])
+    # Summary Metrics
+    total_invested = sum(sum(i['amount'] for i in u['investments']) for u in st.session_state.users_db)
+    st.metric("PLATFORM TOTAL CAPITAL", f"₱{total_invested:,.2f}")
+    
+    tab1, tab2 = st.tabs(["👥 INVESTORS", "📥 PENDING"])
     
     with tab1:
-        if not st.session_state.users_db: st.info("No investors yet.")
+        st.write("### List of Active Investors")
         for u in st.session_state.users_db:
-            principal = sum(i['amount'] for i in u['investments'])
-            interest = principal * 0.20
+            p = sum(i['amount'] for i in u['investments'])
             st.markdown(f"""
             <div class="owner-card">
-                <b>Investor:</b> {u['name']}<br>
-                <b>Principal:</b> ₱{principal:,.2f} | <b>Interest (20%):</b> ₱{interest:,.2f}<br>
-                <b>Total Value:</b> ₱{principal + interest:,.2f}
+                <b>Name:</b> {u['name']}<br>
+                <b>Principal:</b> ₱{p:,.2f}<br>
+                <b>Profit (20%):</b> ₱{p*0.2:,.2f}<br>
+                <b>Total Value:</b> ₱{p*1.2:,.2f}
             </div>
             """, unsafe_allow_html=True)
 
     with tab2:
-        if not st.session_state.pending_deposits: st.info("No pending deposits.")
+        if not st.session_state.pending_deposits: st.info("No pending payments.")
         for i, dep in enumerate(st.session_state.pending_deposits):
-            st.write(f"User: {dep['user']} | Amount: ₱{dep['amount']:,}")
-            if st.button("APPROVE PAYMENT", key=f"app_{i}"):
+            st.write(f"**{dep['user']}** | ₱{dep['amount']:,}")
+            if st.button("APPROVE", key=f"app_{i}"):
                 for u in st.session_state.users_db:
-                    if u['name'] == dep['user']:
-                        u['investments'].append({"amount": dep['amount']})
+                    if u['name'] == dep['user']: u['investments'].append({"amount": dep['amount']})
                 st.session_state.pending_deposits.pop(i)
                 st.rerun()
 
@@ -100,22 +104,20 @@ elif st.session_state.page == "dashboard":
     u = st.session_state.current_user
     st.markdown(f"""
     <div class="info-box">
-        <h4 style="color:#0038a8; margin-top:0;">📊 INVESTMENT UTILIZATION</h4>
-        <p style="font-size:0.85em;">YOUR EVERY PENNY IS USED TO TRADE IN THE STOCK MARKET OR BLACK MARKET INTERNATIONAL TRADING OF COMMODITIES AND ETC. WE SECURE HIGH RETURNS THROUGH GLOBAL LIQUIDITY MARKETS.</p>
+        <h4 style="color:#0038a8; margin-top:0;">📊 INVESTOR INFO</h4>
+        <p style="font-size:0.85em;">YOUR EVERY PENNY IS USED TO TRADE IN THE STOCK MARKET OR BLACK MARKET INTERNATIONAL TRADING OF COMMODITIES AND ETC.</p>
     </div>
     """, unsafe_allow_html=True)
 
     principal = sum(i['amount'] for i in u['investments'])
-    interest = principal * 0.20
-    st.metric("TOTAL BALANCE", f"₱{principal + interest:,.2f}", f"+₱{interest:,.2f}")
+    st.metric("TOTAL BALANCE", f"₱{principal * 1.2:,.2f}", f"+₱{principal*0.2:,.2f} Interest")
 
     st.subheader("📥 INVEST")
     amt = st.selectbox("PESO AMOUNT", [500, 1000, 5000, 10000, 50000])
-    if st.button(f"PROCEED TO PAY ₱{amt:,}"):
+    if st.button(f"INVEST ₱{amt:,}"):
         st.session_state.pending_deposits.append({"user": u['name'], "amount": float(amt)})
         st.success("Request sent to Owner!")
 
     if st.button("LOGOUT"):
         st.session_state.page = "login"
         st.rerun()
-                                              
