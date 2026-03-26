@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 # --- 1. SETTINGS & THEME ---
 st.set_page_config(page_title="BP Market", page_icon="🇵🇭")
 
+# Custom CSS for UI and spacing
 st.markdown("""
     <style>
     .stApp { margin-top: 20px; }
@@ -22,5 +23,18 @@ st.markdown("""
         text-align: center;
         color: #0038a8;
         font-weight: 900;
-        font-size: 2.2em
-        
+        font-size: 2.2em;
+        line-height: 1;
+        margin-bottom: 0px;
+    }
+    .deposit-card {
+        background-color: #ffffff;
+        padding: 15px;
+        border-radius: 15px;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 10px;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+    }
+    </style>
+    """, unsafe_allow
+            
