@@ -1,86 +1,87 @@
 import streamlit as st
-from datetime import datetime
 
-# --- 1. MOBILE-FIRST UI ---
-st.set_page_config(page_title="BP Market", page_icon="🇵🇭")
-st.markdown("""<style>
-    .stApp { margin: 0; padding: 0; }
-    .stButton>button { width: 100%; border-radius: 10px; height: 3em; background: #0038a8; color: white; }
-    input { text-transform: uppercase; }
-    .card { background: #f1f5f9; padding: 10px; border-radius: 8px; border-left: 4px solid #0038a8; margin-bottom: 10px; }
-</style>""", unsafe_allow_html=True)
+# --- 1. SETTINGS ---
+st.set_page_config(page_title="BP Market")
 
-# --- 2. LOGO ---
-st.markdown("<h2 style='text-align:center; color:#0038a8;'>🇵🇭 BAGONG PILIPINAS</h2>", unsafe_allow_html=True)
-st.caption("AUTHORIZED STOCK MARKET PORTAL")
+# --- 2. DATABASE ---
+if 'page' not in st.session_state: st.session_state.page = "login"
+if 'users' not in st.session_state: st.session_state.users = []
+if 'pending' not in st.session_state: st.session_state.pending = []
 
-# --- 3. SESSION STATE ---
-for key in ['pg', 'users', 'user', 'pending']:
-    if key not in st.session_state:
-        st.session_state.pg = 'login'
-        st.session_state.users = []
-        st.session_state.user = None
-        st.session_state.pending = []
-
-# --- 4. PAGES ---
-if st.session_state.pg == "login":
+# --- 3. LOGIN PAGE ---
+if st.session_state.page == "login":
+    st.header("🇵🇭 BP MARKET LOGIN")
     name = st.text_input("FULL NAME").upper()
     pin = st.text_input("PIN / PASSWORD", type="password")
+    
     if st.button("ENTER"):
+        # OWNER LOGIN (Your Secret Code)
         if name == "ADMIN" and pin == "090807":
-            st.session_state.pg = "admin"
+            st.session_state.page = "admin"
             st.rerun()
+        # USER LOGIN
         user = next((u for u in st.session_state.users if u['n'] == name and u['p'] == pin), None)
         if user:
-            st.session_state.user = user
-            st.session_state.pg = "dash"
+            st.session_state.cur_user = user
+            st.session_state.page = "dash"
             st.rerun()
-    if st.button("SIGN UP"):
-        st.session_state.pg = "signup"
+        else:
+            st.error("Invalid Name or PIN")
+            
+    if st.button("CREATE ACCOUNT"):
+        st.session_state.page = "signup"
         st.rerun()
 
-elif st.session_state.pg == "signup":
-    n = st.text_input("NAME").upper()
-    p = st.text_input("6-DIGIT PIN", type="password", max_chars=6)
+# --- 4. SIGN UP PAGE ---
+elif st.session_state.page == "signup":
+    st.header("SIGN UP")
+    new_name = st.text_input("NAME").upper()
+    new_pin = st.text_input("6-DIGIT PIN", type="password", max_chars=6)
     if st.button("REGISTER"):
-        if n and len(p) == 6:
-            st.session_state.users.append({"n": n, "p": p, "inv": []})
-            st.session_state.pg = "login"
+        if new_name and len(new_pin) == 6:
+            st.session_state.users.append({'n': new_name, 'p': new_pin, 'bal': 0})
+            st.success("Registered! Please Login.")
+            st.session_state.page = "login"
             st.rerun()
 
-elif st.session_state.pg == "admin":
-    st.subheader("👑 OWNER")
-    total = sum(sum(i for i in u['inv']) for u in st.session_state.users)
-    st.metric("TOTAL CAPITAL", f"₱{total:,.2f}")
+# --- 5. OWNER ADMIN PAGE ---
+elif st.session_state.page == "admin":
+    st.header("👑 OWNER DASHBOARD")
+    st.write("### Pending Approvals")
+    if not st.session_state.pending:
+        st.info("No pending investments.")
+    for i, d in enumerate(st.session_state.pending):
+        st.write(f"User: {d['u']} | Amount: ₱{d['a']:,}")
+        if st.button(f"APPROVE PAYMENT {i}"):
+            for u in st.session_state.users:
+                if u['n'] == d['u']: u['bal'] += d['a']
+            st.session_state.pending.pop(i)
+            st.rerun()
     
-    t1, t2 = st.tabs(["INVESTORS", "PENDING"])
-    with t1:
-        for u in st.session_state.users:
-            p = sum(u['inv'])
-            st.markdown(f"<div class='card'><b>{u['n']}</b><br>Bal: ₱{p*1.2:,.2f} (Int: ₱{p*0.2:,.2f})</div>", unsafe_allow_html=True)
-    with t2:
-        for i, d in enumerate(st.session_state.pending):
-            st.write(f"{d['u']}: ₱{d['a']:,}")
-            if st.button("APPROVE", key=f"ap{i}"):
-                for u in st.session_state.users:
-                    if u['n'] == d['u']: u['inv'].append(d['a'])
-                st.session_state.pending.pop(i)
-                st.rerun()
+    st.write("---")
+    st.write("### Active Investors List")
+    for u in st.session_state.users:
+        st.write(f"Name: {u['n']} | Total: ₱{u['bal'] * 1.2:,.2f}")
+    
     if st.button("LOGOUT"):
-        st.session_state.pg = "login"
+        st.session_state.page = "login"
         st.rerun()
 
-elif st.session_state.pg == "dash":
-    u = st.session_state.user
-    st.info("YOUR EVERY PENNY IS USED TO TRADE IN THE STOCK MARKET OR BLACK MARKET INTERNATIONAL TRADING OF COMMODITIES.")
-    p = sum(u['inv'])
-    st.metric("TOTAL BALANCE", f"₱{p*1.2:,.2f}", f"+₱{p*0.2:,.2f}")
+# --- 6. USER DASHBOARD ---
+elif st.session_state.page == "dash":
+    u = st.session_state.cur_user
+    st.header(f"Welcome, {u['n']}")
+    # Your specific investment pitch
+    st.info("YOUR EVERY PENNY IS USED TO TRADE IN THE STOCK MARKET OR BLACK MARKET INTERNATIONAL TRADING OF COMMODITIES AND ETC.")
     
-    amt = st.selectbox("AMOUNT", [500, 1000, 5000, 10000])
-    if st.button(f"INVEST ₱{amt:,}"):
-        st.session_state.pending.append({"u": u['n'], "a": float(amt)})
-        st.success("Sent to Admin!")
+    # Shows balance + 20% interest
+    st.metric("TOTAL BALANCE", f"₱{u['bal'] * 1.2:,.2f}", f"+₱{u['bal']*0.2:,.2f} Interest")
     
+    amt = st.number_input("Amount to Invest", min_value=100, step=100)
+    if st.button("PROCEED TO INVEST"):
+        st.session_state.pending.append({'u': u['n'], 'a': float(amt)})
+        st.success("Payment request sent to Admin!")
+
     if st.button("LOGOUT"):
-        st.session_state.pg = "login"
+        st.session_state.page = "login"
         st.rerun()
