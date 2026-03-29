@@ -5,188 +5,173 @@ import os
 from datetime import datetime, timedelta
 import time
 
-# --- 1. DATA PERSISTENCE ---
-DB_FILE = "bpsm_official_data.json"
-DAILY_ROI = 0.20 
+# --- 1. THE CENTRAL REGISTRY (DATABASE) ---
+REGISTRY_FILE = "bpsm_registry.json"
 
-def load_db():
-    if os.path.exists(DB_FILE):
-        try:
-            with open(DB_FILE, "r") as f:
-                return json.load(f)
-        except:
-            return None
-    return None
+def load_registry():
+    if os.path.exists(REGISTRY_FILE):
+        with open(REGISTRY_FILE, "r") as f:
+            return json.load(f)
+    return {}
 
-def save_db(data):
-    with open(DB_FILE, "w") as f:
-        json.dump(data, f, default=str)
+def save_user_to_registry(name, pin):
+    registry = load_registry()
+    if name in registry:
+        return False, "User already exists. Please Sign In."
+    registry[name] = {
+        "pin": pin,
+        "wallet_balance": 0.0,
+        "investments": [],
+        "transactions": []
+    }
+    with open(REGISTRY_FILE, "w") as f:
+        json.dump(registry, f, default=str)
+    return True, "Success"
 
-# --- 2. MOBILE-FIRST UI SETUP ---
-st.set_page_config(page_title="BPSM - Bagong Pilipinas", page_icon="🇵🇭", layout="centered")
+def update_user_data(name, data):
+    registry = load_registry()
+    registry[name] = data
+    with open(REGISTRY_FILE, "w") as f:
+        json.dump(registry, f, default=str)
+
+# --- 2. THEMED DESIGN ---
+st.set_page_config(page_title="BPSM Official", page_icon="🇵🇭", layout="centered")
 
 st.markdown("""
     <style>
-    .main-header { text-align: center; color: #0038a8; font-family: 'Arial Black', sans-serif; margin-bottom: 0; }
-    .sub-header { text-align: center; color: #ce1126; font-size: 0.8rem; letter-spacing: 2px; margin-top: -5px; margin-bottom: 20px; }
-    [data-testid="stMetric"] { background: #ffffff; border-radius: 12px; padding: 15px; border: 1px solid #0038a8; box-shadow: 2px 2px 8px rgba(0,0,0,0.05); }
-    .stButton>button { height: 3.5rem; border-radius: 10px; background-color: #0038a8 !important; color: white !important; font-weight: bold; width: 100%; }
-    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
-    .stTabs [data-baseweb="tab"] { background-color: #f0f2f6; border-radius: 10px 10px 0 0; padding: 10px 20px; }
+    .stApp { background-color: #f4f7f9; }
+    .cover-card {
+        background: linear-gradient(135deg, #0038a8 0%, #ce1126 100%);
+        padding: 40px;
+        border-radius: 20px;
+        color: white;
+        text-align: center;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+    .id-label { font-size: 0.7rem; color: #666; font-weight: bold; margin-bottom: -15px; }
+    .stButton>button { border-radius: 10px; height: 3.5rem; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. SESSION & AUTH ---
-if 'user' not in st.session_state:
-    st.session_state.user = load_db()
+# --- 3. AUTHENTICATION FLOW ---
+if 'active_user' not in st.session_state:
+    st.session_state.active_user = None
 
-if st.session_state.user is None:
-    st.markdown("<h1 class='main-header'>BAGONG PILIPINAS</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='sub-header'>STOCK MARKET PORTAL</p>", unsafe_allow_html=True)
-    
-    with st.container(border=True):
-        st.subheader("🏦 Investor Registration")
-        name = st.text_input("FULL NAME").upper()
-        pin = st.text_input("6-DIGIT TRANSACTION PIN", type="password", max_chars=6)
+if st.session_state.active_user is None:
+    # --- COVER DESIGN ---
+    st.markdown("""
+        <div class="cover-card">
+            <h1 style='margin:0;'>BAGONG PILIPINAS</h1>
+            <p style='letter-spacing:3px; opacity:0.9;'>STOCK MARKET PORTAL</p>
+            <hr style='opacity:0.3;'>
+            <p style='font-size:0.9rem;'>Official Digital Trading Floor</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    auth_tab, reg_tab = st.tabs(["🔑 SECURE SIGN-IN", "📝 REGISTER I.D."])
+
+    with auth_tab:
+        st.markdown("<p class='id-label'>INVESTOR FULL NAME</p>", unsafe_allow_html=True)
+        login_name = st.text_input("name_id", label_visibility="collapsed").upper()
         
-        if st.button("CREATE ACCOUNT"):
-            if name and len(pin) == 6 and pin.isdigit():
-                user_data = {
-                    "name": name, 
-                    "pin": pin, 
-                    "wallet_balance": 0.0, 
-                    "investments": [], 
-                    "transactions": []
-                }
-                save_db(user_data)
-                st.session_state.user = user_data
+        st.markdown("<p class='id-label'>6-DIGIT SECURITY PIN</p>", unsafe_allow_html=True)
+        login_pin = st.text_input("pin_id", type="password", max_chars=6, label_visibility="collapsed")
+        
+        if st.button("VERIFY & ENTER", use_container_width=True):
+            registry = load_registry()
+            if login_name in registry and registry[login_name]['pin'] == login_pin:
+                st.session_state.active_user = login_name
                 st.rerun()
             else:
-                st.error("Please enter your name and a 6-digit numeric PIN.")
-    st.stop()
+                st.error("Invalid Credentials. Please check your Name or PIN.")
 
-# --- 4. DASHBOARD LOGIC ---
-user = st.session_state.user
-
-# Calculate Matured vs Active
-now = datetime.now()
-matured_amt = 0.0
-active_amt = 0.0
-
-for inv in user['investments']:
-    end_time = datetime.fromisoformat(inv['release_time'])
-    if now >= end_time:
-        matured_amt += (inv['amount'] + inv['profit'])
-    else:
-        active_amt += inv['amount']
-
-total_liquid = user['wallet_balance'] + matured_amt
-
-# --- 5. TOP DISPLAY ---
-st.markdown("<h2 class='main-header' style='font-size: 1.4rem;'>BPSM DASHBOARD</h2>", unsafe_allow_html=True)
-st.caption(f"Welcome, {user['name']} | Portfolio Status: Active")
-
-col1, col2 = st.columns(2)
-col1.metric("LIQUID CASH", f"₱{total_liquid:,.2f}")
-col2.metric("ACTIVE TRADES", f"₱{active_amt:,.2f}")
-
-st.divider()
-
-# --- 6. NAVIGATION TABS ---
-tab_trade, tab_wallet, tab_history = st.tabs(["📊 TRADE", "💳 WALLET", "📄 LOGS"])
-
-with tab_trade:
-    st.write("### Execute Buy Order")
-    st.info("Dividend Rate: **20% Daily** | Maturity: **24 Hours**")
-    
-    trade_amt = st.number_input("Amount to Invest (PHP)", min_value=100.0, step=100.0)
-    
-    if st.button("CONFIRM PURCHASE"):
-        if total_liquid >= trade_amt:
-            new_trade = {
-                "amount": trade_amt,
-                "profit": trade_amt * DAILY_ROI,
-                "start_time": datetime.now().isoformat(),
-                "release_time": (datetime.now() + timedelta(hours=24)).isoformat()
-            }
-            # Deduct from cash balance first
-            if user['wallet_balance'] >= trade_amt:
-                user['wallet_balance'] -= trade_amt
-            else:
-                # If buying with matured funds, we just remove the old investment record later
-                st.toast("Re-investing matured funds...")
-            
-            user['investments'].append(new_trade)
-            save_db(user)
-            st.success("Trade Placed! Your dividends are growing.")
-            st.rerun()
-        else:
-            st.error("Insufficient Funds. Please top up your wallet.")
-
-    st.write("---")
-    st.write("### Current Positions")
-    if not user['investments']:
-        st.caption("No active trades.")
-    for inv in user['investments']:
-        end = datetime.fromisoformat(inv['release_time'])
-        if now < end:
-            st.info(f"📈 **₱{inv['amount']:,}** maturing in {str(end-now).split('.')[0]}")
-        else:
-            st.success(f"✅ **₱{inv['amount']:,}** + ₱{inv['profit']:,} Matured")
-
-with tab_wallet:
-    mode = st.radio("Action", ["Deposit Funds", "Request Payout"], horizontal=True)
-    
-    if mode == "Deposit Funds":
-        st.write("### 📥 Official Deposit")
-        st.warning("GCASH / MAYA: **0912-345-6789**")
-        ref_id = st.text_input("Transaction Reference No.")
-        dep_amt = st.number_input("Amount Deposited", min_value=100.0)
+    with reg_tab:
+        st.write("### Create Official Investor ID")
+        new_name = st.text_input("FULL NAME (AS PER GOVT I.D.)").upper()
+        new_pin = st.text_input("CREATE 6-DIGIT PIN", type="password", max_chars=6)
+        confirm_pin = st.text_input("CONFIRM PIN", type="password", max_chars=6)
         
-        if st.button("NOTIFY ADMIN"):
-            user['transactions'].append({
-                "date": datetime.now().isoformat(),
-                "type": "DEPOSIT",
-                "amt": dep_amt,
-                "status": "PENDING",
-                "ref": ref_id
-            })
-            save_db(user)
-            st.toast("Deposit reported. Verification in progress.")
-            
-    else:
-        st.write("### 📤 Request Payout")
-        out_amt = st.number_input("Withdraw Amount", min_value=500.0)
-        verify_pin = st.text_input("Enter Transaction PIN", type="password")
-        
-        if st.button("SUBMIT WITHDRAWAL"):
-            if verify_pin == user['pin'] and total_liquid >= out_amt:
-                user['transactions'].append({
-                    "date": datetime.now().isoformat(),
-                    "type": "WITHDRAW",
-                    "amt": out_amt,
-                    "status": "PENDING"
-                })
-                # Lock the funds
-                user['wallet_balance'] -= out_amt
-                save_db(user)
-                st.warning("Withdrawal processing. Expect arrival within 12-24h.")
+        if st.button("REGISTER ACCOUNT", use_container_width=True):
+            if len(new_pin) != 6 or not new_pin.isdigit():
+                st.error("PIN must be exactly 6 digits.")
+            elif new_pin != confirm_pin:
+                st.error("PINs do not match.")
+            elif new_name:
+                success, msg = save_user_to_registry(new_name, new_pin)
+                if success:
+                    st.success("Account Created! You can now Sign In.")
+                else:
+                    st.warning(msg)
+
+# --- 4. THE DASHBOARD (LOGGED IN) ---
+else:
+    current_username = st.session_state.active_user
+    # Pull fresh data from registry
+    registry = load_registry()
+    user_data = registry[current_username]
+
+    st.markdown(f"### 🇵🇭 Welcome, {current_username}")
+    
+    # [Calculations for Matured Profits]
+    now = datetime.now()
+    total_matured = 0.0
+    active_inv = 0.0
+    
+    for inv in user_data['investments']:
+        release = datetime.fromisoformat(inv['release_time'])
+        if now >= release:
+            total_matured += (inv['amount'] + inv['profit'])
+        else:
+            active_inv += inv['amount']
+    
+    liquid_bal = user_data['wallet_balance'] + total_matured
+
+    # UI Metrics
+    m1, m2 = st.columns(2)
+    m1.metric("AVAILABLE CASH", f"₱{liquid_bal:,.2f}")
+    m2.metric("IN MARKET", f"₱{active_inv:,.2f}")
+
+    # Operations
+    tab1, tab2, tab3 = st.tabs(["📊 TRADE", "💳 WALLET", "📜 HISTORY"])
+
+    with tab1:
+        st.write("#### Open New Stock Position")
+        amt = st.number_input("Purchase Amount", min_value=500.0, step=500.0)
+        if st.button("EXECUTE TRADE"):
+            if liquid_bal >= amt:
+                new_trade = {
+                    "amount": amt, "profit": amt * 0.20,
+                    "start_time": datetime.now().isoformat(),
+                    "release_time": (datetime.now() + timedelta(hours=24)).isoformat()
+                }
+                user_data['investments'].append(new_trade)
+                # Deduct from wallet balance
+                if user_data['wallet_balance'] >= amt:
+                    user_data['wallet_balance'] -= amt
+                update_user_data(current_username, user_data)
+                st.success("Trade Successful!")
+                st.rerun()
             else:
-                st.error("Incorrect PIN or Insufficient Balance.")
+                st.error("Insufficient Funds.")
 
-with tab_history:
-    if user['transactions']:
-        df = pd.DataFrame(user['transactions'])
-        st.table(df[['type', 'amt', 'status', 'ref']])
-    else:
-        st.write("No transaction history.")
+    with tab2:
+        st.write("#### Deposit Proof")
+        d_amt = st.number_input("Amount Sent", min_value=100.0)
+        ref = st.text_input("Reference No.")
+        if st.button("SUBMIT DEPOSIT"):
+            user_data['transactions'].append({"type": "DEP", "amt": d_amt, "status": "PENDING", "ref": ref, "date": str(now)})
+            update_user_data(current_username, user_data)
+            st.toast("Admin notified.")
 
-# --- 7. FOOTER & REFRESH ---
-st.divider()
-if st.button("🔒 EXIT SYSTEM"):
-    st.session_state.user = None
+    with tab3:
+        if user_data['transactions']:
+            st.table(pd.DataFrame(user_data['transactions'])[['type', 'amt', 'status']])
+
+    if st.sidebar.button("LOGOUT"):
+        st.session_state.active_user = None
+        st.rerun()
+
+    time.sleep(10)
     st.rerun()
-
-# Timer refresh to keep clocks updated
-time.sleep(10)
-st.rerun()
+    
