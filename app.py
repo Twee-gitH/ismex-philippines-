@@ -1,14 +1,27 @@
 import streamlit as st
 import time
+import json
+import os
 from datetime import datetime, timedelta
 
-# --- 1. APP CONFIG & STYLE ---
-st.set_page_config(page_title="BP Market", page_icon="🇵🇭")
+# --- 1. DATA PERSISTENCE (THE "DATABASE") ---
+DB_FILE = "user_data.json"
+
+def load_data():
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r") as f:
+            return json.load(f)
+    return None
+
+def save_data(data):
+    with open(DB_FILE, "w") as f:
+        json.dump(data, f, default=str)
+
+# --- 2. APP CONFIG & STYLE ---
+st.set_page_config(page_title="BP Market", page_icon="🇵🇭", layout="centered")
 
 st.markdown("""
     <style>
-    .stApp { margin-top: 50px; }
-    /* Only text inputs are forced to Upper Case now */
     input[type="text"] { text-transform: uppercase; }
     .stButton>button {
         width: 100%;
@@ -17,125 +30,136 @@ st.markdown("""
         background-color: #0038a8;
         color: white;
         font-weight: bold;
-        border: none;
-        margin-top: 10px;
     }
-    .deposit-card {
-        background-color: #ffffff;
+    .metric-card {
+        background-color: #f8fafc;
         padding: 15px;
-        border-radius: 15px;
-        border: 1px solid #e2e8f0;
-        margin-bottom: 10px;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+        border-radius: 10px;
+        border-left: 5px solid #0038a8;
     }
-    .timer-text { color: #f59e0b; font-weight: bold; font-size: 0.9em; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. THE "MEMORY" (SESSION STATE) ---
-if 'deposits' not in st.session_state:
-    st.session_state.deposits = []
-if 'page' not in st.session_state:
-    st.session_state.page = "signup"
-if 'user_pin' not in st.session_state:
-    st.session_state.user_pin = ""
-
-# --- 3. CALCULATIONS ---
-total_principal = sum(d['amount'] for d in st.session_state.deposits)
-total_profit = sum(d['amount'] * 0.20 for d in st.session_state.deposits)
-total_balance = total_principal + total_profit
+# --- 3. SESSION INITIALIZATION ---
+if 'user' not in st.session_state:
+    st.session_state.user = load_data()
 
 # --- 4. SIGNUP PAGE ---
-if st.session_state.page == "signup":
-    st.markdown("<h2 style='text-align: center;'>🇵🇭 INVESTOR SIGN UP</h2>", unsafe_allow_html=True)
+if st.session_state.user is None:
+    st.markdown("<h2 style='text-align: center;'>🇵🇭 INVESTOR REGISTRATION</h2>", unsafe_allow_html=True)
     full_name = st.text_input("FULL NAME").upper()
+    reg_pin = st.text_input("CREATE 6-DIGIT PIN", type="password", max_chars=6)
     
-    st.markdown("---")
-    # PIN logic: max 6 chars, numeric only
-    reg_pin = st.text_input("CREATE 6-DIGIT PIN", type="password", max_chars=6, help="Numbers only")
-    st.caption("⚠️ MUST BE EXACTLY 6 DIGIT NUMBERS")
-
     if st.button("CREATE SECURE ACCOUNT"):
         if full_name and len(reg_pin) == 6 and reg_pin.isdigit():
-            st.session_state.user_name = full_name
-            st.session_state.user_pin = reg_pin
-            st.session_state.page = "dashboard"
+            user_data = {
+                "name": full_name,
+                "pin": reg_pin,
+                "deposits": []
+            }
+            save_data(user_data)
+            st.session_state.user = user_data
             st.rerun()
         else:
-            st.error("PLEASE PROVIDE FULL NAME AND A 6-DIGIT NUMERIC PIN")
+            st.error("PIN MUST BE EXACTLY 6 DIGITS")
 
 # --- 5. DASHBOARD PAGE ---
-elif st.session_state.page == "dashboard":
-    st.markdown(f"### MABUHAY, {st.session_state.user_name}!")
+else:
+    user = st.session_state.user
+    st.markdown(f"### MABUHAY, {user['name']}! 👋")
     
-    col1, col2 = st.columns(2)
-    col1.metric("TOTAL BALANCE", f"₱{total_balance:,.2f}")
-    col2.metric("EXPECTED PROFIT", f"₱{total_profit:,.2f}", delta="20% DAILY")
-
-    st.markdown("---")
+    # Logic: Only count profit if time has passed
+    total_principal = sum(d['amount'] for d in user['deposits'])
+    matured_profit = 0
+    pending_profit = 0
     
-    # --- DEPOSIT SECTION ---
-    st.subheader("📥 NEW INVESTMENT")
-    amounts = [100, 500, 1000, 5000, 10000, 20000, 30000, 50000]
-    selected_amt = st.selectbox("CHOOSE PESO AMOUNT", amounts)
-    
-    if st.button(f"INVEST ₱{selected_amt:,}"):
-        new_dep = {
-            "amount": float(selected_amt),
-            "start_time": datetime.now(),
-            "release_time": datetime.now() + timedelta(hours=24),
-            "profit": float(selected_amt) * 0.20
-        }
-        st.session_state.deposits.append(new_dep)
-        st.success(f"₱{selected_amt:,} ADDED TO YOUR PORTFOLIO!")
-        st.rerun()
-
-    # --- INDIVIDUAL DEPOSITS + COUNTDOWN ---
-    st.markdown("---")
-    st.subheader("⏳ ACTIVE INVESTMENTS")
-    if not st.session_state.deposits:
-        st.write("No active investments.")
-    else:
-        for d in st.session_state.deposits:
-            # Calculate remaining time
-            remaining = d['release_time'] - datetime.now()
-            if remaining.total_seconds() > 0:
-                hours, remainder = divmod(int(remaining.total_seconds()), 3600)
-                minutes, _ = divmod(remainder, 60)
-                timer_display = f"{hours}h {minutes}m remaining"
-            else:
-                timer_display = "✅ PROFIT READY"
-
-            st.markdown(f"""
-            <div class="deposit-card">
-                <b>Investment: ₱{d['amount']:,}</b><br>
-                <span style="color: green;">+ ₱{d['profit']:,} (20% Profit)</span><br>
-                <span class="timer-text">🕒 {timer_display}</span>
-            </div>
-            """, unsafe_allow_html=True)
-
-    # --- WITHDRAWAL SECTION ---
-    st.markdown("---")
-    st.subheader("📤 WITHDRAW")
-    st.caption("MINIMUM WITHDRAWAL: ₱500.00")
-    withdraw_amt = st.number_input("ENTER PESO AMOUNT", min_value=0.0)
-    
-    # Security Check
-    confirm_pin = st.text_input("ENTER 6-DIGIT PIN TO WITHDRAW", type="password", max_chars=6)
-    
-    if st.button("SUBMIT WITHDRAWAL REQUEST"):
-        if total_balance < 500:
-            st.error("⚠️ BALANCE MUST BE AT LEAST ₱500.00")
-        elif withdraw_amt < 500:
-            st.error("⚠️ MINIMUM WITHDRAWAL IS ₱500.00")
-        elif confirm_pin != st.session_state.user_pin:
-            st.error("❌ INCORRECT PIN. ACCESS DENIED.")
-        elif withdraw_amt > total_balance:
-            st.error("⚠️ INSUFFICIENT FUNDS.")
+    for d in user['deposits']:
+        release_time = datetime.fromisoformat(d['release_time'])
+        if datetime.now() >= release_time:
+            matured_profit += d['profit']
         else:
-            st.success("✅ PIN VERIFIED. WITHDRAWAL REQUEST SENT TO ADMIN.")
+            pending_profit += d['profit']
 
-    if st.button("LOGOUT"):
-        st.session_state.page = "signup"
+    current_balance = total_principal + matured_profit
+
+    # Dashboard Metrics
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown(f'<div class="metric-card"><b>AVAILABLE BALANCE</b><br><h2>₱{current_balance:,.2f}</h2></div>', unsafe_allow_html=True)
+    with col2:
+        st.markdown(f'<div class="metric-card"><b>PENDING GROWTH</b><br><h2 style="color:#f59e0b;">₱{pending_profit:,.2f}</h2></div>', unsafe_allow_html=True)
+
+    st.divider()
+
+    # --- NEW INVESTMENT ---
+    with st.expander("📥 START NEW INVESTMENT", expanded=True):
+        amounts = [500, 1000, 5000, 10000, 20000, 50000]
+        selected_amt = st.selectbox("CHOOSE PESO AMOUNT", amounts)
+        if st.button(f"CONFIRM ₱{selected_amt:,} DEPOSIT"):
+            new_dep = {
+                "amount": float(selected_amt),
+                "start_time": datetime.now().isoformat(),
+                "release_time": (datetime.now() + timedelta(hours=24)).isoformat(),
+                "profit": float(selected_amt) * 0.20
+            }
+            user['deposits'].append(new_dep)
+            save_data(user)
+            st.success("INVESTMENT ACTIVATED!")
+            st.rerun()
+
+    # --- ACTIVE INVESTMENTS WITH PROGRESS BARS ---
+    st.subheader("⏳ PORTFOLIO GROWTH")
+    if not user['deposits']:
+        st.info("No active investments. Start one above!")
+    else:
+        for i, d in enumerate(user['deposits']):
+            start = datetime.fromisoformat(d['start_time'])
+            end = datetime.fromisoformat(d['release_time'])
+            now = datetime.now()
+            
+            total_duration = (end - start).total_seconds()
+            elapsed = (now - start).total_seconds()
+            progress = min(max(elapsed / total_duration, 0.0), 1.0)
+
+            with st.container(border=True):
+                col_a, col_b = st.columns([3, 1])
+                col_a.write(f"**Principal: ₱{d['amount']:,}**")
+                col_b.write(f"**+ ₱{d['profit']:,}**")
+                
+                st.progress(progress)
+                
+                if progress < 1.0:
+                    remaining = end - now
+                    hrs, mins = divmod(int(remaining.total_seconds()), 3600)
+                    st.caption(f"🕒 Maturity in {hrs}h {mins//60}m")
+                else:
+                    st.write("✅ **PROFIT ADDED TO BALANCE**")
+
+    # --- WITHDRAWAL ---
+    st.divider()
+    st.subheader("📤 WITHDRAW FUNDS")
+    w_amt = st.number_input("AMOUNT TO WITHDRAW", min_value=0.0, step=100.0)
+    w_pin = st.text_input("VERIFY PIN", type="password", max_chars=6)
+
+    if st.button("REQUEST WITHDRAWAL"):
+        if w_amt < 500:
+            st.error("MINIMUM WITHDRAWAL IS ₱500")
+        elif w_amt > current_balance:
+            st.error("INSUFFICIENT BALANCE")
+        elif w_pin != user['pin']:
+            st.error("INVALID PIN")
+        else:
+            st.balloons()
+            st.success("REQUEST SENT! ADMIN WILL PROCESS WITHIN 24H.")
+
+    if st.button("RESET ACCOUNT (LOGOUT)"):
+        if os.path.exists(DB_FILE):
+            os.remove(DB_FILE)
+        st.session_state.user = None
         st.rerun()
-        
+
+    # --- AUTO-REFRESH SCRIPT ---
+    # This keeps the progress bars moving every 60 seconds
+    time.sleep(60)
+    st.rerun()
+            
