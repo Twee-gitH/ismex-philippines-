@@ -49,9 +49,6 @@ st.markdown("""
     @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
     .ticker-text { display: inline-block; white-space: nowrap; animation: ticker 25s linear infinite; font-weight: bold; }
     .stButton>button { border-radius: 12px !important; height: 3.5rem !important; font-weight: bold !important; width: 100%; }
-    .status-yellow { color: #ffff00 !important; font-weight: bold; }
-    .status-blue { color: #0000ff !important; font-weight: bold; }
-    .status-green { color: #00ff00 !important; font-weight: bold; }
     .roi-text { color: #0dcf70; font-weight: bold; font-size: 1.2rem; }
     </style>
     """, unsafe_allow_html=True)
@@ -61,7 +58,6 @@ if st.session_state.user is None and not st.session_state.is_boss:
     st.markdown("<div style='background: linear-gradient(135deg, #0038a8 0%, #ce1126 100%); padding: 40px 20px; text-align: center;'><h1>BAGONG PILIPINAS<br>STOCK MARKET</h1><p>Automatic 24-Hour Payouts | 5% Daily ROI</p></div>", unsafe_allow_html=True)
     
     t1, t2 = st.tabs(["🔑 SIGN-IN", "📝 REGISTER"])
-    
     with t1:
         ln = st.text_input("INVESTOR NAME").upper()
         lp = st.text_input("SECURE PIN", type="password", max_chars=6)
@@ -70,7 +66,6 @@ if st.session_state.user is None and not st.session_state.is_boss:
             if ln in reg and reg[ln].get('pin') == lp:
                 st.session_state.user = ln
                 st.rerun()
-            
     with t2:
         rn = st.text_input("FULL LEGAL NAME").upper()
         rp = st.text_input("CREATE 6-DIGIT PIN", type="password", max_chars=6)
@@ -82,7 +77,7 @@ if st.session_state.user is None and not st.session_state.is_boss:
                 update_user(rn, new_data)
                 st.success("Account Created!")
                 time.sleep(1.5)
-                st.rerun() # Forces refresh back to Sign-In tab
+                st.rerun() # Forces refresh to jump back to Sign-In tab
     
     st.divider()
     with st.expander("MASTER ACCESS"):
@@ -156,12 +151,21 @@ elif st.session_state.user:
         with c2: 
             if st.button("📤 WITHDRAW"): st.session_state.page = "wd"; st.rerun()
 
+        # --- ROI TICKER RESTORED ---
         st.markdown("<div class='section-header'>⏳ ACTIVE 24H CYCLES (5% ROI)</div>", unsafe_allow_html=True)
-        for idx, t in enumerate(data.get('inv', [])):
-            try:
-                rem = datetime.fromisoformat(t['end']) - now
-                st.markdown(f"<div style='background:#1c1e24; padding:10px; border-radius:10px; margin-bottom:5px;'>Capital: ₱{t['amt']:,} | Time Left: {str(rem).split('.')[0]}</div>", unsafe_allow_html=True)
-            except: continue
+        if not data.get('inv'): st.write("No active interest running.")
+        else:
+            for idx, t in enumerate(data['inv']):
+                try:
+                    start_t = datetime.fromisoformat(t['start'])
+                    end_t = datetime.fromisoformat(t['end'])
+                    rem = end_t - now
+                    elapsed = now - start_t
+                    mins_passed = elapsed.total_seconds() / 60
+                    # Ticking ROI calculation: (amt * 0.05 / 1440 mins) * elapsed mins
+                    running_roi = min(t['amt']*0.05, (t['amt']*0.05/1440)*mins_passed)
+                    st.markdown(f"<div style='background:#1c1e24; padding:15px; border-radius:15px; border:1px solid #3a3d46; margin-bottom:10px;'><div style='display:flex; justify-content:space-between;'><span>Capital: ₱{t['amt']:,}</span><span class='roi-text'>Real-time ROI: ₱{running_roi:,.2f}</span></div><div style='color:#0dcf70; font-size:1.8rem; font-weight:bold; text-align:center;'>{str(rem).split('.')[0]}</div></div>", unsafe_allow_html=True)
+                except: continue
 
         st.markdown("<div class='section-header'>📜 TRANSACTION LOGS</div>", unsafe_allow_html=True)
         for t in reversed(data.get('tx', [])):
@@ -199,4 +203,4 @@ if st.session_state.is_boss:
                     update_user(u_name, all_users[u_name]); st.rerun()
 
     if st.button("EXIT ADMIN"): st.session_state.is_boss = False; st.rerun()
-                    
+        
