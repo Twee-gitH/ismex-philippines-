@@ -54,13 +54,13 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 
-# --- 4. ACCESS CONTROL (NUMBERS ONLY PIN & AUTO-CAPS) ---
+# --- 4. ACCESS CONTROL (ENHANCED REFERRAL & PIN RULES) ---
 if st.session_state.user is None and not st.session_state.is_boss:
-    # This CSS forces the input boxes to SHOW capital letters visually
+    # CSS to force ALL-CAPS visually in the input boxes
     st.markdown("""
         <style>
         input { text-transform: uppercase; }
-        input[type="password"] { text-transform: none; } /* Don't transform dots in password field */
+        input[type="password"] { text-transform: none; } 
         </style>
         """, unsafe_allow_html=True)
 
@@ -85,7 +85,9 @@ if st.session_state.user is None and not st.session_state.is_boss:
         rp1 = st.text_input("CREATE 6-DIGIT PIN", type="password", max_chars=6, key="reg_pin1")
         rp2 = st.text_input("CONFIRM 6-DIGIT PIN", type="password", max_chars=6, key="reg_pin2")
         
-        referrer = st.text_input("REFERRER NAME (REQUIRED)", key="reg_ref").upper()
+        # Updated Referral Label and Info
+        st.error("🚨 **REFERRAL RULE:** ONLY ACTIVE INVESTORS ARE ALLOWED TO REFER NEW USERS.")
+        referrer = st.text_input("REFERRER NAME (ACTIVE INVESTOR ONLY)", key="reg_ref").upper()
         
         if st.button("CREATE ACCOUNT"):
             reg = load_registry()
@@ -104,7 +106,7 @@ if st.session_state.user is None and not st.session_state.is_boss:
             elif not referrer or referrer not in reg:
                 st.error("❌ VALID REFERRER REQUIRED.")
             elif not reg[referrer].get('inv'):
-                st.error(f"❌ {referrer} IS NOT AN ACTIVE INVESTOR.")
+                st.error(f"❌ {referrer} IS NOT AN ACTIVE INVESTOR. ONLY ACTIVE INVESTORS CAN REFER.")
             elif final_name in reg:
                 st.error("❌ THIS LEGAL NAME IS ALREADY REGISTERED.")
             else:
@@ -114,6 +116,7 @@ if st.session_state.user is None and not st.session_state.is_boss:
                 })
                 st.success("✅ ACCOUNT CREATED SUCCESSFULLY!"); time.sleep(1.5); st.rerun()
     st.stop()
+    
     
     
 
