@@ -92,15 +92,14 @@ elif st.session_state.user:
     data = reg[name]
     now = datetime.now()
 
-    # --- AUTO-PAYOUT & RECYCLE LOGIC ---
+    # --- AUTO-PAYOUT & RECYCLE ---
     payout_triggered = False
     for i in data.get('inv', []):
         try:
             end_time = datetime.fromisoformat(i['end'])
             if now >= end_time: 
                 profit_amt = i['amt'] * 0.05
-                data['wallet'] += profit_amt # Add ROI to balance
-                # Recycle: Restart the timer for the original capital
+                data['wallet'] += profit_amt
                 i['start'] = now.isoformat()
                 i['end'] = (now + timedelta(hours=24)).isoformat()
                 data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "DAILY ROI CREDIT", "amt": profit_amt, "status": "SUCCESSFUL_WD"})
@@ -164,7 +163,9 @@ elif st.session_state.user:
         st.markdown("<div class='section-header'>⏳ ACTIVE 24H CYCLES (5% ROI)</div>", unsafe_allow_html=True)
         if not data.get('inv'): st.write("No active interest running.")
         else:
-            for idx, t in enumerate(data['inv']):
+            # Reversed list so newest capital is first
+            for idx, t in enumerate(reversed(data['inv'])):
+                actual_idx = len(data['inv']) - 1 - idx
                 try:
                     start_t, end_t = datetime.fromisoformat(t['start']), datetime.fromisoformat(t['end'])
                     rem, elapsed = end_t - now, now - start_t
@@ -172,10 +173,9 @@ elif st.session_state.user:
                     
                     st.markdown(f"<div style='background:#1c1e24; padding:15px; border-radius:15px; border:1px solid #3a3d46; margin-bottom:10px;'><div style='display:flex; justify-content:space-between;'><span>Capital: ₱{t['amt']:,}</span><span class='roi-text'>Real-time ROI: ₱{running_roi:,.2f}</span></div><div style='color:#0dcf70; font-size:1.8rem; font-weight:bold; text-align:center;'>{str(rem).split('.')[0]}</div></div>", unsafe_allow_html=True)
                     
-                    # --- PULL CAPITAL BUTTON ---
-                    if st.button(f"Pull Capital (₱{t['amt']:,})", key=f"pull_{idx}"):
-                        data['wallet'] += t['amt'] # Move capital back to balance
-                        data['inv'].pop(idx) # Remove from active cycles
+                    if st.button(f"Pull Capital (₱{t['amt']:,})", key=f"pull_{actual_idx}"):
+                        data['wallet'] += t['amt']
+                        data['inv'].pop(actual_idx)
                         data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "CAPITAL RECALL", "amt": t['amt'], "status": "SUCCESSFUL_WD"})
                         update_user(name, data); st.rerun()
                 except: continue
@@ -193,7 +193,8 @@ if st.session_state.is_boss:
     st.markdown("<div class='section-header'>📈 REAL-TIME INVESTOR ROI</div>", unsafe_allow_html=True)
     for u_name, u_info in all_users.items():
         if u_info.get('inv'):
-            for inv in u_info['inv']:
+            # Also reversed here for admin visibility
+            for inv in reversed(u_info['inv']):
                 if 'start' not in inv: continue
                 try:
                     rem = datetime.fromisoformat(inv['end']) - datetime.now()
