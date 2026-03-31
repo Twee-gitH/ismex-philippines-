@@ -3,12 +3,12 @@ import json
 import os
 from datetime import datetime, timedelta
 import time
-import random
 import pandas as pd
 
 # --- 1. SESSION INITIALIZER ---
 if 'user' not in st.session_state: st.session_state.user = None
 if 'page' not in st.session_state: st.session_state.page = "main"
+if 'is_boss' not in st.session_state: st.session_state.is_boss = False
 
 # --- 2. DATA ENGINE ---
 REGISTRY_FILE = "bpsm_registry.json"
@@ -39,9 +39,7 @@ st.markdown("""
     .balance-val { color: #0dcf70; font-size: 3.5rem; font-weight: 900; margin: 5px 0; }
     .section-header { background: #1c1e24; padding: 12px 20px; margin-top: 25px; border-left: 5px solid #0dcf70; font-weight: bold; text-transform: uppercase; color: #0dcf70; }
     .ticker-wrap { background: #000; color: #0dcf70; padding: 12px 0; position: fixed; bottom: 0; width: 100%; font-size: 0.85rem; border-top: 1px solid #2a2b30; z-index: 999; }
-    
-    /* CUSTOM BUTTONS */
-    .stButton>button { border-radius: 12px !important; height: 3.5rem !important; font-weight: bold !important; }
+    .stButton>button { border-radius: 12px !important; height: 3.5rem !important; font-weight: bold !important; width: 100%; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -54,7 +52,7 @@ if st.session_state.user is None:
         lp = st.text_input("SECURE PIN", type="password", max_chars=6)
         if st.button("VERIFY & ACCESS"):
             reg = load_registry()
-            if ln in reg and reg[ln]['pin'] == lp:
+            if ln in reg and reg[ln].get('pin') == lp:
                 st.session_state.user = ln
                 st.rerun()
     with t2:
@@ -93,56 +91,36 @@ else:
         data['inv'] = active_inv
         update_user(name, data); st.rerun()
 
-    # Dashboard UI
+    # Shared Header
     st.markdown(f"<div class='user-box'><p style='color:#8c8f99;'>WITHDRAWABLE BALANCE</p><h1 class='balance-val'>₱{data['wallet']:,.2f}</h1><p style='color:#8c8f99;'>Account: {name}</p></div>", unsafe_allow_html=True)
-    
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("📥 DEPOSIT"): st.session_state.page = "dep"; st.rerun()
-    with c2:
-        if data['wallet'] >= 1000:
-            if st.button("📤 WITHDRAW"): st.session_state.page = "wd"; st.rerun()
-        else: st.button("📤 WITHDRAW (Min ₱1k)", disabled=True)
 
-    # PAGE: DEPOSIT
-    if st.session_state.page == "dep":
-        st.markdown("<div class='section-header'>📥 DEPOSIT CAPITAL</div>", unsafe_allow_html=True)
-        st.info("Capital deploys automatically for 5% ROI upon approval.")
-        d_amt = st.number_input("Amount (PHP)", min_value=100.0)
-        if st.button("SUBMIT FOR VERIFICATION"):
-            data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "DEPOSIT", "amt": d_amt, "status": "PENDING"})
-            update_user(name, data)
-            st.success("Sent! Awaiting Admin."); time.sleep(1); st.session_state.page = "main"; st.rerun()
-        if st.button("⬅️ CANCEL"): st.session_state.page = "main"; st.rerun()
-
-    # PAGE: WITHDRAW
-    if st.session_state.page == "wd":
-        st.markdown("<div class='section-header'>📤 WITHDRAW FUNDS</div>", unsafe_allow_html=True)
-        w_amt = st.number_input("Amount", min_value=1000.0, max_value=data['wallet'])
-        if st.button("CONFIRM WITHDRAWAL"):
-            data['wallet'] -= w_amt
-            data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "WITHDRAW", "amt": w_amt, "status": "PENDING"})
-            update_user(name, data)
-            st.success("Request Sent!"); time.sleep(1); st.session_state.page = "main"; st.rerun()
-        if st.button("⬅️ CANCEL"): st.session_state.page = "main"; st.rerun()
-
-    # ACTIVE CYCLES (WITH KEYERROR PROTECTION)
+    # --- NAVIGATION LOGIC ---
     if st.session_state.page == "main":
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("📥 DEPOSIT"):
+                st.session_state.page = "dep"
+                st.rerun()
+        with c2:
+            if data['wallet'] >= 1000:
+                if st.button("📤 WITHDRAW"):
+                    st.session_state.page = "wd"
+                    st.rerun()
+            else:
+                st.button("📤 WITHDRAW (Min ₱1k)", disabled=True)
+
         st.markdown("<div class='section-header'>⏳ ACTIVE 24H CYCLES (5% ROI)</div>", unsafe_allow_html=True)
-        if not active_inv: st.write("No active cycles.")
+        if not active_inv:
+            st.write("No active cycles.")
         else:
             for t in active_inv:
-                start_str = t.get('start') # Protection for old data
+                start_str = t.get('start')
                 end_t = datetime.fromisoformat(t['end'])
                 rem = end_t - now
-                
-                # Interest tracking logic
                 if start_str:
-                    start_t = datetime.fromisoformat(start_str)
-                    prog = min((now - start_t).total_seconds() / (end_t - start_t).total_seconds(), 1.0)
+                    prog = min((now - datetime.fromisoformat(start_str)).total_seconds() / (end_t - datetime.fromisoformat(start_str)).total_seconds(), 1.0)
                     live_int = (t['amt'] * 0.05) * prog
-                else:
-                    live_int = 0.0 # Default for legacy data
+                else: live_int = 0.0
 
                 st.markdown(f"""
                 <div style='background:#1c1e24; padding:15px; border-radius:15px; border:1px solid #3a3d46; margin-bottom:10px;'>
@@ -158,34 +136,74 @@ else:
         for t in reversed(data.get('tx', [])):
             st.write(f"**{t['date']}** | {t['type']} | ₱{t['amt']:,} | `{t['status']}`")
 
+    elif st.session_state.page == "dep":
+        st.markdown("<div class='section-header'>📥 DEPOSIT CAPITAL</div>", unsafe_allow_html=True)
+        st.info("Capital deploys automatically for 5% ROI upon approval.")
+        d_amt = st.number_input("Amount (PHP)", min_value=100.0, step=100.0)
+        if st.button("SUBMIT FOR VERIFICATION"):
+            data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "DEPOSIT", "amt": d_amt, "status": "PENDING"})
+            update_user(name, data)
+            st.success("Sent to Admin!"); time.sleep(1)
+            st.session_state.page = "main"
+            st.rerun()
+        if st.button("⬅️ CANCEL"):
+            st.session_state.page = "main"
+            st.rerun()
+
+    elif st.session_state.page == "wd":
+        st.markdown("<div class='section-header'>📤 WITHDRAW FUNDS</div>", unsafe_allow_html=True)
+        w_amt = st.number_input("Amount", min_value=1000.0, max_value=data['wallet'], step=100.0)
+        if st.button("CONFIRM WITHDRAWAL"):
+            data['wallet'] -= w_amt
+            data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "WITHDRAW", "amt": w_amt, "status": "PENDING"})
+            update_user(name, data)
+            st.success("Request Sent!"); time.sleep(1)
+            st.session_state.page = "main"
+            st.rerun()
+        if st.button("⬅️ CANCEL"):
+            st.session_state.page = "main"
+            st.rerun()
+
     if st.sidebar.button("LOGOUT"):
-        st.session_state.user = None; st.rerun()
+        st.session_state.user = None
+        st.session_state.page = "main"
+        st.rerun()
 
 # --- 6. BOSS PANEL ---
 st.divider()
 with st.expander("⚠️"):
+    key_in = st.text_input("Key", type="password")
     if st.button("ENTER ADMIN"):
-        # Put your key here
-        st.session_state.is_boss = True; st.rerun()
+        if key_in == "Orange01!":
+            st.session_state.is_boss = True
+            st.rerun()
 
-if st.session_state.get("is_boss"):
+if st.session_state.is_boss:
     all_users = load_registry()
     st.markdown("### 👑 ADMIN APPROVALS")
     for u_name, u_info in all_users.items():
         for idx, tx in enumerate(u_info.get('tx', [])):
             if tx['status'] == "PENDING":
                 st.warning(f"{tx['type']}: {u_name} | ₱{tx['amt']:,}")
-                if st.button(f"APPROVE {u_name}", key=f"app_{u_name}_{idx}"):
+                if st.button(f"APPROVE {u_name} (₱{tx['amt']})", key=f"app_{u_name}_{idx}"):
                     if tx['type'] == "DEPOSIT":
                         all_users[u_name]['tx'][idx]['status'] = "SUCCESS"
-                        start = datetime.now()
+                        start_time = datetime.now()
                         all_users[u_name].setdefault('inv', []).append({
-                            "amt": tx['amt'], "start": start.isoformat(), 
-                            "end": (start + timedelta(hours=24)).isoformat()
+                            "amt": tx['amt'], 
+                            "start": start_time.isoformat(), 
+                            "end": (start_time + timedelta(hours=24)).isoformat()
                         })
-                    else: all_users[u_name]['tx'][idx]['status'] = "SUCCESS"
-                    with open(REGISTRY_FILE, "w") as f: json.dump(all_users, f, default=str)
-                    st.success("Verified!"); st.rerun()
-    if st.button("EXIT ADMIN"): st.session_state.is_boss = False; st.rerun()
+                    else:
+                        all_users[u_name]['tx'][idx]['status'] = "SUCCESS"
+                    
+                    with open(REGISTRY_FILE, "w") as f:
+                        json.dump(all_users, f, default=str)
+                    st.success("Approved!"); st.rerun()
+    
+    if st.button("EXIT ADMIN"):
+        st.session_state.is_boss = False
+        st.rerun()
 
-time.sleep(1); st.rerun()
+time.sleep(1)
+st.rerun()
