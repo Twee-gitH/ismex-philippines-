@@ -52,7 +52,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. ACCESS CONTROL (UPDATED WITH REFERRER CHECK) ---
+# --- 4. ACCESS CONTROL ---
 if st.session_state.user is None and not st.session_state.is_boss:
     st.markdown("<div style='background: linear-gradient(135deg, #0038a8 0%, #ce1126 100%); padding: 40px 20px; text-align: center;'><h1>BAGONG PILIPINAS<br>STOCK MARKET</h1></div>", unsafe_allow_html=True)
     t1, t2 = st.tabs(["🔑 SIGN-IN", "📝 REGISTER"])
@@ -72,20 +72,15 @@ if st.session_state.user is None and not st.session_state.is_boss:
         
         if st.button("CREATE ACCOUNT"):
             reg = load_registry()
-            
-            # Check if Referrer exists
             if not referrer or referrer not in reg:
                 st.error("❌ Valid Referrer required.")
-            
-            # CHECK: Is the Referrer actually an active investor?
-            elif not reg[referrer].get('inv'):
-                st.error(f"❌ {referrer} IS NOT AN INVESTOR. Only active investors can refer.")
-                
+            elif not reg[referrer].get('inv') and reg[referrer].get('wallet', 0) <= 0:
+                st.error(f"❌ {referrer} is not an active investor.")
             elif rn in reg:
                 st.error("❌ Already registered.")
-                
             elif rn and len(rp) == 6:
-                update_user(rn, {"pin": rp, "wallet": 0.0, "inv": [], "tx": [], "ref_by": referrer, "bonus_claimed": False})
+                # Initializing claimed_refs as an empty list for new users
+                update_user(rn, {"pin": rp, "wallet": 0.0, "inv": [], "tx": [], "ref_by": referrer, "claimed_refs": []})
                 st.success("✅ Account Created!"); time.sleep(1.5); st.rerun()
     st.stop()
 
@@ -96,7 +91,7 @@ if st.session_state.user:
     data = reg[name]
     now = datetime.now()
 
-    # --- AUTO-PROCESSOR (ROI & RENEWAL) ---
+    # --- AUTO-PROCESSOR ---
     data_changed = False
     for i in data.get('inv', []):
         try:
@@ -112,7 +107,6 @@ if st.session_state.user:
                 i['start'] = now.isoformat()
                 i['end'] = (now + timedelta(days=7)).isoformat()
                 i['roi_paid'] = False 
-                data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "AUTO-RENEWAL (7 DAYS)", "amt": i['amt'], "status": "SUCCESSFUL"})
                 data_changed = True
         except: continue
     
@@ -120,7 +114,7 @@ if st.session_state.user:
 
     st.markdown(f"<div class='user-box'><p style='color:#8c8f99;'>WITHDRAWABLE BALANCE</p><h1 class='balance-val'>₱{data['wallet']:,.2f}</h1><p style='color:#8c8f99;'>Account: {name}</p></div>", unsafe_allow_html=True)
 
-    # --- NAVIGATION PAGES ---
+    # --- NAVIGATION ---
     if st.session_state.page == "dep":
         st.markdown("<div class='section-header'>📥 DEPOSIT</div>", unsafe_allow_html=True)
         d_amt = st.number_input("Amount", min_value=1000.0)
@@ -185,43 +179,47 @@ if st.session_state.user:
                             update_user(name, data); st.rerun()
                 except: continue
 
-        # --- 20% REFERRAL BONUS SECTION ---
+        # --- 20% REFERRAL BONUS SECTION (ENHANCED) ---
         st.markdown("<div class='section-header'>👥 MY REFERRALS</div>", unsafe_allow_html=True)
         reg_all = load_registry()
         my_refs_list = []
+        if 'claimed_refs' not in data: data['claimed_refs'] = []
         
         for u_name, u_info in reg_all.items():
             if u_info.get('ref_by') == name:
-                # Find the first successful deposit amount
                 first_dep_amt = 0
                 for tx in u_info.get('tx', []):
                     if tx['status'] == "SUCCESSFUL_DEP":
                         first_dep_amt = tx['amt']
                         break
                 
-                status_text = f"₱{first_dep_amt:,.2f}" if first_dep_amt > 0 else "NOT INVESTOR YET"
+                is_investor = first_dep_amt > 0
+                already_paid = u_name in data['claimed_refs']
+                status_text = "✅ PAID" if already_paid else (f"₱{first_dep_amt:,.2f}" if is_investor else "NOT ACTIVE")
                 
                 my_refs_list.append({
                     "INVITEE": u_name,
                     "1ST DEPOSIT": status_text,
-                    "BONUS (20%)": first_dep_amt * 0.20
+                    "BONUS (20%)": 0 if already_paid else (first_dep_amt * 0.20),
+                    "CLAIMABLE": is_investor and not already_paid
                 })
         
         if my_refs_list:
-            st.table(pd.DataFrame(my_refs_list))
-            total_pending_bonus = sum([r["BONUS (20%)"] for r in my_refs_list])
+            display_df = pd.DataFrame(my_refs_list).drop(columns=['CLAIMABLE'])
+            st.table(display_df)
+            total_pending_bonus = sum([r["BONUS (20%)"] for r in my_refs_list if r["CLAIMABLE"]])
             
-            if not data.get('bonus_claimed', False):
-                if total_pending_bonus > 0:
-                    st.write(f"### Available Bonus: ₱{total_pending_bonus:,.2f}")
-                    if st.button("🎁 CLAIM 20% REFERRAL BONUS"):
-                        data['wallet'] += total_pending_bonus
-                        data['bonus_claimed'] = True
-                        data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "REFERRAL BONUS", "amt": total_pending_bonus, "status": "SUCCESSFUL"})
-                        update_user(name, data)
-                        st.success("Bonus added to balance!"); time.sleep(1); st.rerun()
+            if total_pending_bonus > 0:
+                st.write(f"### Available Bonus: ₱{total_pending_bonus:,.2f}")
+                if st.button("🎁 CLAIM REFERRAL BONUSES"):
+                    newly_claimed = [r["INVITEE"] for r in my_refs_list if r["CLAIMABLE"]]
+                    data['claimed_refs'].extend(newly_claimed)
+                    data['wallet'] += total_pending_bonus
+                    data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "REFERRAL BONUS", "amt": total_pending_bonus, "status": "SUCCESSFUL"})
+                    update_user(name, data)
+                    st.success("Bonus added to balance!"); time.sleep(1); st.rerun()
             else:
-                st.success("✅ Bonuses already claimed.")
+                st.info("No new bonuses available.")
         else:
             st.info("No invitees found.")
 
@@ -230,7 +228,7 @@ if st.session_state.user:
         for t in reversed(data.get('tx', [])):
             st.write(f"{t['date']} | {t['type']} | ₱{t['amt']:,} | {t['status']}")
 
-    if st.sidebar.button("LOGOUT"): st.session_state.user = None; st.rerun()
+    if st.button("LOGOUT"): st.session_state.user = None; st.rerun()
 
 # --- 6. BOSS PANEL ---
 elif st.session_state.is_boss:
