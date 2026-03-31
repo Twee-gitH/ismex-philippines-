@@ -4,6 +4,7 @@ import os
 import shutil
 from datetime import datetime, timedelta
 import time
+import pandas as pd
 
 # --- 1. SESSION INITIALIZER ---
 if 'user' not in st.session_state: st.session_state.user = None
@@ -220,19 +221,37 @@ elif st.session_state.is_boss:
     all_users = load_registry()
     st.markdown("### 👑 MASTER CONTROL")
     
-    # --- REPAIRED DATA MIGRATION TOOL ---
-    if st.button("🔴 FORCE MIGRATE: SET ALL TO 7-DAYS"):
+    # --- MIGRATION & EXPORT ---
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔴 FORCE MIGRATE: SET ALL TO 7-DAYS"):
+            for u_name, u_info in all_users.items():
+                migrated = False
+                for inv in u_info.get('inv', []):
+                    if 'start' in inv:
+                        s_dt = datetime.fromisoformat(inv['start'])
+                        inv['end'] = (s_dt + timedelta(days=7)).isoformat()
+                        migrated = True
+                if migrated: update_user(u_name, u_info)
+            st.success("Migration Complete!"); st.rerun()
+    
+    # --- INVESTOR DATABASE VIEW ---
+    st.markdown("<div class='section-header'>📋 INVESTOR DATABASE (NAMES, PINS, REFERRALS)</div>", unsafe_allow_html=True)
+    db_list = []
+    for u_name, u_info in all_users.items():
+        db_list.append({
+            "NAME": u_name,
+            "PIN": u_info.get('pin', 'N/A'),
+            "WALLET": f"₱{u_info.get('wallet', 0):,.2f}",
+            "REFERRER": u_info.get('ref_by', 'DIRECT')
+        })
+    st.table(pd.DataFrame(db_list))
+
+    with st.expander("🔍 VIEW ALL INDIVIDUAL TRANSACTIONS"):
         for u_name, u_info in all_users.items():
-            migrated = False
-            for inv in u_info.get('inv', []):
-                if 'start' in inv:
-                    s_dt = datetime.fromisoformat(inv['start'])
-                    inv['end'] = (s_dt + timedelta(days=7)).isoformat()
-                    migrated = True
-            if migrated:
-                update_user(u_name, u_info)
-        st.success("Migration Complete! Skipped corrupted entries.")
-        st.rerun()
+            st.write(f"**{u_name}**")
+            st.json(u_info.get('tx', []))
+            st.divider()
 
     st.markdown("<div class='section-header'>📈 REAL-TIME INVESTOR ROI</div>", unsafe_allow_html=True)
     for u_name, u_info in all_users.items():
@@ -244,7 +263,7 @@ elif st.session_state.is_boss:
                     st.write(f"👤 {u_name} | Capital: ₱{inv['amt']:,} | ⏳ {str(rem).split('.')[0]}")
                 except: continue
     
-    st.markdown("<div class='section-header'>🔔 ALL TRANSACTIONS & REQUESTS</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-header'>🔔 PENDING ACTIONS</div>", unsafe_allow_html=True)
     for u_name, u_info in all_users.items():
         for idx, tx in enumerate(u_info.get('tx', [])):
             if tx['status'] == "PENDING_DEP":
@@ -258,7 +277,5 @@ elif st.session_state.is_boss:
                     all_users[u_name]['tx'][idx]['status'] = "SUCCESSFUL_WD"
                     update_user(u_name, all_users[u_name]); st.rerun()
     
-    if st.button("EXIT ADMIN"): 
-        st.session_state.is_boss = False
-        st.rerun()
-        
+    if st.button("EXIT ADMIN"): st.session_state.is_boss = False; st.rerun()
+                    
