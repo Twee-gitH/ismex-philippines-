@@ -75,15 +75,25 @@ if st.session_state.user is None and not st.session_state.is_boss:
     with t2:
         rn = st.text_input("FULL LEGAL NAME", key="reg_name").upper()
         rp = st.text_input("CREATE 6-DIGIT PIN", type="password", max_chars=6, key="reg_pin")
-        referrer = st.text_input("REFERRER NAME (OPTIONAL)", key="reg_ref").upper()
+        referrer = st.text_input("REFERRER NAME (REQUIRED)", key="reg_ref").upper()
         if st.button("CREATE ACCOUNT"):
             reg = load_registry()
-            if rn and len(rp) == 6:
-                new_data = {"pin": rp, "wallet": 0.0, "inv": [], "tx": [], "ref_by": referrer if referrer in reg else None, "ref_bonus_requested": False, "ref_bonus_claimed": False, "ref_earnings": 0.0}
-                update_user(rn, new_data)
-                st.success("Account Created! Please Sign-In.")
-                time.sleep(1.5)
-                st.rerun()
+            # UPDATED: Mandatory and must be an existing user
+            if not referrer:
+                st.error("Referrer Name is required.")
+            elif referrer not in reg:
+                st.error(f"Access Denied: '{referrer}' is not a registered investor. Please check the spelling.")
+            elif rn and len(rp) == 6:
+                if rn in reg:
+                    st.error("This name is already registered.")
+                else:
+                    new_data = {"pin": rp, "wallet": 0.0, "inv": [], "tx": [], "ref_by": referrer, "ref_bonus_requested": False, "ref_bonus_claimed": False, "ref_earnings": 0.0}
+                    update_user(rn, new_data)
+                    st.success("Account Created! Please Sign-In.")
+                    time.sleep(1.5)
+                    st.rerun()
+            else:
+                st.error("Incomplete details or invalid PIN.")
     
     st.divider()
     with st.expander("MASTER ACCESS"):
@@ -198,7 +208,7 @@ if st.session_state.user:
                     
                     is_unlocked = now >= end_t
                     unlock_date_str = end_t.strftime('%Y-%m-%d')
-                    btn_label = f"Pull Capital (₱{t['amt']:,})" if is_unlocked else f"Available to Pull Capital after {unlock_date_str}"
+                    btn_label = f"Pull Capital (₱{t['amt']:,})" if is_unlocked else f"AVAILABLE TO PULL CAPITAL AFTER {unlock_date_str}"
                     
                     if st.button(btn_label, key=f"pull_{actual_idx}", disabled=not is_unlocked):
                         data['wallet'] += t['amt']
@@ -221,7 +231,6 @@ elif st.session_state.is_boss:
     all_users = load_registry()
     st.markdown("### 👑 MASTER CONTROL")
     
-    # --- MIGRATION & EXPORT ---
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔴 FORCE MIGRATE: SET ALL TO 7-DAYS"):
@@ -235,7 +244,6 @@ elif st.session_state.is_boss:
                 if migrated: update_user(u_name, u_info)
             st.success("Migration Complete!"); st.rerun()
     
-    # --- INVESTOR DATABASE VIEW ---
     st.markdown("<div class='section-header'>📋 INVESTOR DATABASE (NAMES, PINS, REFERRALS)</div>", unsafe_allow_html=True)
     db_list = []
     for u_name, u_info in all_users.items():
@@ -278,4 +286,4 @@ elif st.session_state.is_boss:
                     update_user(u_name, all_users[u_name]); st.rerun()
     
     if st.button("EXIT ADMIN"): st.session_state.is_boss = False; st.rerun()
-                    
+                
