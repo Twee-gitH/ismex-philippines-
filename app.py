@@ -207,9 +207,26 @@ if st.session_state.get("is_boss"):
         st.session_state.show_adm = not st.session_state.show_adm
         st.rerun()
 
-    if st.session_state.show_adm:
-        st.markdown("### 👑 BPSM MASTER CONTROL")
-        
+            # --- NEW: PENDING DEPOSITS APPROVAL ---
+        st.markdown("<div class='section-header'>🔎 PENDING DEPOSITS</div>", unsafe_allow_html=True)
+
+        for u_name, u_info in all_users.items():
+            for idx, tx in enumerate(u_info.get('tx', [])):
+                if tx['status'] == "PENDING VERIFICATION":
+                    st.warning(f"Investor: **{u_name}** | Amount: **₱{tx['amt']:,}**")
+                    
+                    if st.button(f"APPROVE ₱{tx['amt']:,} for {u_name}", key=f"app_{u_name}_{idx}"):
+                        # 1. Update the Status to SUCCESS
+                        all_users[u_name]['tx'][idx]['status'] = "SUCCESS"
+                        # 2. Add the money to their actual wallet balance
+                        all_users[u_name]['wallet'] += tx['amt']
+                        
+                        # Save the updated registry
+                        with open(REGISTRY_FILE, "w") as f: 
+                            json.dump(all_users, f, default=str)
+                        st.success(f"Verified! ₱{tx['amt']:,} added to {u_name}.")
+                        st.rerun()
+                        
         # 1. SENSITIVE USER DATA (Names & PINs)
         st.markdown("<div class='section-header'>👤 INVESTOR CREDENTIALS</div>", unsafe_allow_html=True)
         user_creds = []
