@@ -92,22 +92,21 @@ elif st.session_state.user:
     data = reg[name]
     now = datetime.now()
 
-    # --- AUTO-PAYOUT ---
-    active_inv = []
+    # --- AUTO-PAYOUT & RECYCLE LOGIC ---
     payout_triggered = False
     for i in data.get('inv', []):
         try:
             end_time = datetime.fromisoformat(i['end'])
             if now >= end_time: 
                 profit_amt = i['amt'] * 0.05
-                total_return = i['amt'] + profit_amt
-                data['wallet'] += total_return
-                data.setdefault('tx', []).append({"date": end_time.strftime("%Y-%m-%d %H:%M"), "type": "PROFIT CREDIT", "amt": total_return, "status": "SUCCESSFUL_WD"})
+                data['wallet'] += profit_amt # Add ROI to balance
+                # Recycle: Restart the timer for the original capital
+                i['start'] = now.isoformat()
+                i['end'] = (now + timedelta(hours=24)).isoformat()
+                data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "DAILY ROI CREDIT", "amt": profit_amt, "status": "SUCCESSFUL_WD"})
                 payout_triggered = True
-            else: active_inv.append(i)
         except: continue
     if payout_triggered:
-        data['inv'] = active_inv
         update_user(name, data); st.rerun()
 
     st.markdown("""<div class="ticker-wrap"><div class="ticker-text">🔥 FLASH: Market liquidation successful! All 24H payouts credited. | 🚀 JOIN NOW: 5% Daily ROI Guaranteed</div></div>""", unsafe_allow_html=True)
@@ -141,10 +140,8 @@ elif st.session_state.user:
                 update_user(name, data); st.session_state.page = "main"; st.rerun()
         if st.button("⬅️ CANCEL"): st.session_state.page = "main"; st.rerun()
 
-    # --- NEW RE-INVEST PAGE ---
     elif st.session_state.page == "reinvest":
         st.markdown("<div class='section-header'>♻️ RE-INVEST FROM BALANCE</div>", unsafe_allow_html=True)
-        st.write(f"Current Balance: ₱{data['wallet']:,.2f}")
         r_amt = st.number_input("Re-invest Amount (Min ₱1,000)", min_value=1000.0, max_value=max(1000.0, data['wallet']), step=100.0)
         if st.button("START 24H CYCLE"):
             if data['wallet'] >= r_amt:
@@ -152,8 +149,7 @@ elif st.session_state.user:
                 st_t = datetime.now()
                 data.setdefault('inv', []).append({"amt": r_amt, "start": st_t.isoformat(), "end": (st_t + timedelta(hours=24)).isoformat()})
                 data.setdefault('tx', []).append({"date": st_t.strftime("%Y-%m-%d %H:%M"), "type": "RE-INVESTMENT", "amt": r_amt, "status": "SUCCESSFUL_DEP"})
-                update_user(name, data)
-                st.session_state.page = "main"; st.success("Investment Started!"); st.rerun()
+                update_user(name, data); st.session_state.page = "main"; st.rerun()
         if st.button("⬅️ BACK"): st.session_state.page = "main"; st.rerun()
 
     else:
@@ -173,7 +169,15 @@ elif st.session_state.user:
                     start_t, end_t = datetime.fromisoformat(t['start']), datetime.fromisoformat(t['end'])
                     rem, elapsed = end_t - now, now - start_t
                     running_roi = min(t['amt']*0.05, (t['amt']*0.05/1440)*(elapsed.total_seconds()/60))
+                    
                     st.markdown(f"<div style='background:#1c1e24; padding:15px; border-radius:15px; border:1px solid #3a3d46; margin-bottom:10px;'><div style='display:flex; justify-content:space-between;'><span>Capital: ₱{t['amt']:,}</span><span class='roi-text'>Real-time ROI: ₱{running_roi:,.2f}</span></div><div style='color:#0dcf70; font-size:1.8rem; font-weight:bold; text-align:center;'>{str(rem).split('.')[0]}</div></div>", unsafe_allow_html=True)
+                    
+                    # --- PULL CAPITAL BUTTON ---
+                    if st.button(f"Pull Capital (₱{t['amt']:,})", key=f"pull_{idx}"):
+                        data['wallet'] += t['amt'] # Move capital back to balance
+                        data['inv'].pop(idx) # Remove from active cycles
+                        data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "CAPITAL RECALL", "amt": t['amt'], "status": "SUCCESSFUL_WD"})
+                        update_user(name, data); st.rerun()
                 except: continue
 
         st.markdown("<div class='section-header'>📜 TRANSACTION LOGS</div>", unsafe_allow_html=True)
@@ -209,4 +213,4 @@ if st.session_state.is_boss:
                     all_users[u_name]['tx'][idx]['status'] = "SUCCESSFUL_WD"
                     update_user(u_name, all_users[u_name]); st.rerun()
     if st.button("EXIT ADMIN"): st.session_state.is_boss = False; st.rerun()
-        
+                
