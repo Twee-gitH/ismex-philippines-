@@ -100,18 +100,18 @@ if st.session_state.user:
     data = reg[name]
     now = datetime.now()
 
-    # --- AUTO-PAYOUT & RECYCLE (20% WEEKLY) ---
     payout_triggered = False
     for i in data.get('inv', []):
         try:
-            end_time = datetime.fromisoformat(i['end'])
-            if now >= end_time: 
-                profit_amt = i['amt'] * 0.20
-                data['wallet'] += profit_amt
-                i['start'] = now.isoformat()
-                i['end'] = (now + timedelta(days=7)).isoformat()
-                data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "WEEKLY ROI CREDIT", "amt": profit_amt, "status": "SUCCESSFUL_WD"})
-                payout_triggered = True
+            if 'end' in i:
+                end_time = datetime.fromisoformat(i['end'])
+                if now >= end_time: 
+                    profit_amt = i['amt'] * 0.20
+                    data['wallet'] += profit_amt
+                    i['start'] = now.isoformat()
+                    i['end'] = (now + timedelta(days=7)).isoformat()
+                    data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "WEEKLY ROI CREDIT", "amt": profit_amt, "status": "SUCCESSFUL_WD"})
+                    payout_triggered = True
         except: continue
     if payout_triggered:
         update_user(name, data); st.rerun()
@@ -174,6 +174,7 @@ if st.session_state.user:
             for idx, t in enumerate(reversed(data['inv'])):
                 actual_idx = len(data['inv']) - 1 - idx
                 try:
+                    if 'start' not in t: continue
                     start_t, end_t = datetime.fromisoformat(t['start']), datetime.fromisoformat(t['end'])
                     rem, elapsed = end_t - now, now - start_t
                     running_roi = min(t['amt']*0.20, (t['amt']*0.20/10080)*(elapsed.total_seconds()/60))
@@ -219,21 +220,25 @@ elif st.session_state.is_boss:
     all_users = load_registry()
     st.markdown("### 👑 MASTER CONTROL")
     
-    # --- DATA MIGRATION TOOL ---
+    # --- REPAIRED DATA MIGRATION TOOL ---
     if st.button("🔴 FORCE MIGRATE: SET ALL TO 7-DAYS"):
         for u_name, u_info in all_users.items():
+            migrated = False
             for inv in u_info.get('inv', []):
-                s_dt = datetime.fromisoformat(inv['start'])
-                inv['end'] = (s_dt + timedelta(days=7)).isoformat()
-            update_user(u_name, u_info)
-        st.success("All investments converted to 7-day cycles!")
+                if 'start' in inv:
+                    s_dt = datetime.fromisoformat(inv['start'])
+                    inv['end'] = (s_dt + timedelta(days=7)).isoformat()
+                    migrated = True
+            if migrated:
+                update_user(u_name, u_info)
+        st.success("Migration Complete! Skipped corrupted entries.")
         st.rerun()
 
     st.markdown("<div class='section-header'>📈 REAL-TIME INVESTOR ROI</div>", unsafe_allow_html=True)
     for u_name, u_info in all_users.items():
         if u_info.get('inv'):
             for inv in reversed(u_info['inv']):
-                if 'start' not in inv: continue
+                if 'start' not in inv or 'end' not in inv: continue
                 try:
                     rem = datetime.fromisoformat(inv['end']) - datetime.now()
                     st.write(f"👤 {u_name} | Capital: ₱{inv['amt']:,} | ⏳ {str(rem).split('.')[0]}")
@@ -256,4 +261,4 @@ elif st.session_state.is_boss:
     if st.button("EXIT ADMIN"): 
         st.session_state.is_boss = False
         st.rerun()
-                        
+        
