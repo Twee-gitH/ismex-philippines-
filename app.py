@@ -34,7 +34,7 @@ def update_user(name, data):
         json.dump(reg, f, default=str)
     shutil.copy(REGISTRY_FILE, BACKUP_FILE)
 
-# --- 3. UI STYLING ---
+
 # --- 3. UI STYLING ---
 st.set_page_config(page_title="BPSM Official", layout="wide")
 st.markdown("""
@@ -54,8 +54,16 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 
-# --- 4. ACCESS CONTROL (AUTOMATED CAPSLOCK & DOUBLE PIN) ---
+# --- 4. ACCESS CONTROL (NUMBERS ONLY PIN & AUTO-CAPS) ---
 if st.session_state.user is None and not st.session_state.is_boss:
+    # This CSS forces the input boxes to SHOW capital letters visually
+    st.markdown("""
+        <style>
+        input { text-transform: uppercase; }
+        input[type="password"] { text-transform: none; } /* Don't transform dots in password field */
+        </style>
+        """, unsafe_allow_html=True)
+
     st.markdown("<div style='background: linear-gradient(135deg, #0038a8 0%, #ce1126 100%); padding: 40px 20px; text-align: center;'><h1>BAGONG PILIPINAS<br>STOCK MARKET</h1></div>", unsafe_allow_html=True)
     t1, t2 = st.tabs(["🔑 SIGN-IN", "📝 REGISTER"])
     
@@ -71,10 +79,9 @@ if st.session_state.user is None and not st.session_state.is_boss:
             
     with t2:
         st.warning("⚠️ **IMPORTANT:** PLEASE INPUT ONLY YOUR LEGAL FIRST NAME AND LAST NAME.")
-        
-        # .upper() here ensures it shows as Caps as they type/submit
         rn = st.text_input("FULL LEGAL NAME (LEGAL FIRST NAME & LAST NAME ONLY)", key="reg_name").upper()
         
+        st.info("ℹ️ **PIN SECURITY:** 6-DIGIT PIN MUST BE NUMBERS ONLY. LETTERS OR SPECIAL CHARACTERS ARE NOT ALLOWED.")
         rp1 = st.text_input("CREATE 6-DIGIT PIN", type="password", max_chars=6, key="reg_pin1")
         rp2 = st.text_input("CONFIRM 6-DIGIT PIN", type="password", max_chars=6, key="reg_pin2")
         
@@ -82,13 +89,14 @@ if st.session_state.user is None and not st.session_state.is_boss:
         
         if st.button("CREATE ACCOUNT"):
             reg = load_registry()
-            
-            # Clean and Force Caps one last time
             final_name = rn.strip().upper()
             name_parts = final_name.split()
             
+            # Validation Checks
             if len(name_parts) < 2:
                 st.error("❌ PLEASE INPUT BOTH YOUR LEGAL FIRST NAME AND LAST NAME.")
+            elif not rp1.isdigit():
+                st.error("❌ PIN ERROR: NUMBERS ONLY! LETTERS AND SPECIAL CHARACTERS ARE NOT ALLOWED.")
             elif rp1 != rp2:
                 st.error("❌ PINS DO NOT MATCH. PLEASE RETYPE YOUR PIN.")
             elif len(rp1) != 6:
@@ -101,15 +109,12 @@ if st.session_state.user is None and not st.session_state.is_boss:
                 st.error("❌ THIS LEGAL NAME IS ALREADY REGISTERED.")
             else:
                 update_user(final_name, {
-                    "pin": rp1, 
-                    "wallet": 0.0, 
-                    "inv": [], 
-                    "tx": [], 
-                    "ref_by": referrer, 
-                    "claimed_refs": []
+                    "pin": rp1, "wallet": 0.0, "inv": [], "tx": [], 
+                    "ref_by": referrer, "claimed_refs": []
                 })
                 st.success("✅ ACCOUNT CREATED SUCCESSFULLY!"); time.sleep(1.5); st.rerun()
     st.stop()
+    
     
 
 # --- 5. INVESTOR PORTAL ---
