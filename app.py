@@ -46,7 +46,7 @@ st.markdown("""
     .ticker-text { display: inline-block; white-space: nowrap; animation: ticker 25s linear infinite; font-weight: bold; }
     .stButton>button { border-radius: 12px !important; height: 3.5rem !important; font-weight: bold !important; width: 100%; }
     
-    /* STATUS COLOR CLASSES */
+    /* STATUS COLORS */
     .status-yellow { color: #ffff00 !important; font-weight: bold; }
     .status-blue { color: #0000ff !important; font-weight: bold; }
     .status-orange { color: #ffa500 !important; font-weight: bold; }
@@ -74,7 +74,6 @@ if st.session_state.user is None and not st.session_state.is_boss:
                 update_user(rn, {"pin": rp, "wallet": 0.0, "inv": [], "tx": []})
                 st.success("Account Created!")
     
-    # ADMIN ACCESS BOX (Restored to login screen)
     st.divider()
     with st.expander("MASTER ACCESS"):
         key = st.text_input("Admin Key", type="password")
@@ -94,14 +93,16 @@ elif st.session_state.user:
     active_inv = []
     payout_triggered = False
     for i in data.get('inv', []):
-        end_time = datetime.fromisoformat(i['end'])
-        if now >= end_time: 
-            profit_amt = i['amt'] * 0.05
-            total_return = i['amt'] + profit_amt
-            data['wallet'] += total_return
-            data.setdefault('tx', []).append({"date": end_time.strftime("%Y-%m-%d %H:%M"), "type": "PROFIT CREDIT", "amt": total_return, "status": "SUCCESSFUL_WD"})
-            payout_triggered = True
-        else: active_inv.append(i)
+        try:
+            end_time = datetime.fromisoformat(i['end'])
+            if now >= end_time: 
+                profit_amt = i['amt'] * 0.05
+                total_return = i['amt'] + profit_amt
+                data['wallet'] += total_return
+                data.setdefault('tx', []).append({"date": end_time.strftime("%Y-%m-%d %H:%M"), "type": "PROFIT CREDIT", "amt": total_return, "status": "SUCCESSFUL_WD"})
+                payout_triggered = True
+            else: active_inv.append(i)
+        except: continue
     
     if payout_triggered:
         data['inv'] = active_inv
@@ -110,7 +111,7 @@ elif st.session_state.user:
     st.markdown("""<div class="ticker-wrap"><div class="ticker-text">🔥 FLASH: Market liquidation successful! All 24H payouts credited. | 🚀 JOIN NOW: 5% Daily ROI Guaranteed | 📈 BPSM: The future of local trading is here!</div></div>""", unsafe_allow_html=True)
     st.markdown(f"<div class='user-box'><p style='color:#8c8f99;'>WITHDRAWABLE BALANCE</p><h1 class='balance-val'>₱{data['wallet']:,.2f}</h1><p style='color:#8c8f99;'>Account: {name}</p></div>", unsafe_allow_html=True)
 
-    # --- PAGE: DEPOSIT ---
+    # --- PAGE NAVIGATION ---
     if st.session_state.page == "dep":
         st.markdown("<div class='section-header'>📥 DEPOSIT CAPITAL</div>", unsafe_allow_html=True)
         d_amt = st.number_input("Enter Amount (Min ₱1,000)", min_value=1000.0, step=100.0, disabled=st.session_state.confirm_amt)
@@ -127,10 +128,8 @@ elif st.session_state.user:
                     data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "DEPOSIT", "amt": d_amt, "status": "PENDING_DEP", "receipt_path": f_path})
                     update_user(name, data)
                     st.session_state.confirm_amt = False; st.session_state.page = "main"; st.success("Submitted!"); time.sleep(1); st.rerun()
-            if st.button("🔄 CHANGE AMOUNT"): st.session_state.confirm_amt = False; st.rerun()
         if st.button("⬅️ BACK"): st.session_state.confirm_amt = False; st.session_state.page = "main"; st.rerun()
 
-    # --- PAGE: WITHDRAW ---
     elif st.session_state.page == "wd":
         st.markdown("<div class='section-header'>📤 WITHDRAW FUNDS</div>", unsafe_allow_html=True)
         w_amt = st.number_input("Amount (Min ₱1,000)", min_value=1000.0, max_value=max(1000.0, data['wallet']), step=100.0)
@@ -144,26 +143,38 @@ elif st.session_state.user:
             else: st.error("Insufficient Balance")
         if st.button("⬅️ CANCEL"): st.session_state.page = "main"; st.rerun()
 
-    # --- MAIN DASHBOARD ---
     else:
+        # MAIN BUTTONS
         c1, c2 = st.columns(2)
         with c1:
             if st.button("📥 DEPOSIT"): st.session_state.page = "dep"; st.rerun()
         with c2:
             if st.button("📤 WITHDRAW"): st.session_state.page = "wd"; st.rerun()
 
+        # ACTIVE CYCLES (ROI/INTEREST DISPLAY)
         st.markdown("<div class='section-header'>⏳ ACTIVE 24H CYCLES (5% ROI)</div>", unsafe_allow_html=True)
-        if not data.get('inv'): st.write("No active cycles.")
+        if not data.get('inv'): st.write("No active interest running.")
         else:
             for idx, t in enumerate(data['inv']):
-                end_t = datetime.fromisoformat(t['end'])
-                rem = end_t - now
-                st.markdown(f"<div style='background:#1c1e24; padding:15px; border-radius:15px; border:1px solid #3a3d46; margin-bottom:10px;'><div style='display:flex; justify-content:space-between;'><span>Principal: ₱{t['amt']:,}</span><span style='color:#0dcf70;'>+5% ROI</span></div><div style='color:#0dcf70; font-size:1.8rem; font-weight:bold; text-align:center;'>{str(rem).split('.')[0]}</div></div>", unsafe_allow_html=True)
-                if st.button(f"Pull Capital to Wallet (₱{t['amt']:,})", key=f"pull_{idx}"):
-                    data['wallet'] += t['amt']
-                    data['inv'].pop(idx)
-                    update_user(name, data); st.rerun()
+                try:
+                    end_t = datetime.fromisoformat(t['end'])
+                    rem = end_t - now
+                    st.markdown(f"""
+                        <div style='background:#1c1e24; padding:15px; border-radius:15px; border:1px solid #3a3d46; margin-bottom:10px;'>
+                            <div style='display:flex; justify-content:space-between;'>
+                                <span>Capital: ₱{t['amt']:,}</span>
+                                <span style='color:#0dcf70; font-weight:bold;'>+5% Interest Running</span>
+                            </div>
+                            <div style='color:#0dcf70; font-size:1.8rem; font-weight:bold; text-align:center;'>{str(rem).split('.')[0]}</div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    if st.button(f"Pull Capital (₱{t['amt']:,})", key=f"pull_{idx}"):
+                        data['wallet'] += t['amt']
+                        data['inv'].pop(idx)
+                        update_user(name, data); st.rerun()
+                except: continue
 
+        # LOGS
         st.markdown("<div class='section-header'>📜 TRANSACTION LOGS</div>", unsafe_allow_html=True)
         for t in reversed(data.get('tx', [])):
             s = t['status']
@@ -179,9 +190,11 @@ elif st.session_state.user:
 if st.session_state.is_boss:
     all_users = load_registry()
     st.markdown("### 👑 MASTER CONTROL")
+    has_pending = False
     for u_name, u_info in all_users.items():
         for idx, tx in enumerate(u_info.get('tx', [])):
             if "PENDING" in tx['status']:
+                has_pending = True
                 s = tx['status']
                 cls = "status-yellow" if "DEP" in s else "status-orange"
                 st.markdown(f"<div style='padding:10px; border:1px solid #3a3d46; border-radius:10px; margin-bottom:10px;'>{tx['type']}: {u_name} | ₱{tx['amt']:,} | <span class='{cls}'>{s.replace('_', ' ')}</span></div>", unsafe_allow_html=True)
@@ -196,6 +209,8 @@ if st.session_state.is_boss:
                         st_t = datetime.now()
                         all_users[u_name].setdefault('inv', []).append({"amt": tx['amt'], "start": st_t.isoformat(), "end": (st_t + timedelta(hours=24)).isoformat()})
                     update_user(u_name, all_users[u_name]); st.success("Updated!"); st.rerun()
+    if not has_pending: st.info("No pending requests.")
     if st.button("EXIT ADMIN"): st.session_state.is_boss = False; st.rerun()
 
 time.sleep(1)
+                
