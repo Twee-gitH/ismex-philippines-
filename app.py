@@ -4,7 +4,7 @@ import os
 import random
 from datetime import datetime, timedelta
 
-# --- 1. DATA ENGINE ---
+# --- 1. DATA STORAGE ---
 REGISTRY_FILE = "bpsm_registry.json"
 
 def load_registry():
@@ -17,31 +17,57 @@ def load_registry():
 def update_user(name, data):
     reg = load_registry()
     reg[name] = data
-    with open(REGISTRY_FILE, "w") as f: json.dump(reg, f, default=str)
+    with open(REGISTRY_FILE, "w") as f: 
+        json.dump(reg, f, default=str)
 
-# --- 2. THE VISUAL TEMPLATE (LOCKED) ---
+# --- 2. GLOBAL STYLES (LOCKED TO SCREENSHOTS) ---
 st.set_page_config(page_title="BPSM Official", layout="wide")
 
 st.markdown("""
     <style>
     input[type="text"] { text-transform: uppercase !important; }
+    
+    /* Withdrawable Balance Card */
     .balance-card { 
         background: #1c1e24; padding: 20px; border-radius: 10px; 
         border: 1px solid #3a3d46; text-align: center; margin-bottom: 15px; 
     }
-    .balance-val { color: #00ff88; font-size: 36px; font-weight: bold; margin: 0; }
-    .news-box { background: #ce112610; border-left: 4px solid #ce1126; padding: 10px; margin-bottom: 20px; }
-    .user-box { 
-        background-color: #1c1e24; padding: 15px; border-radius: 10px; 
-        border: 1px solid #3a3d46; margin-bottom: 5px; border-left: 5px solid #00ff88; 
+    .balance-label { color: #8c8f99; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+    .balance-val { color: #00ff88; font-size: 38px; font-weight: bold; margin: 0; }
+    
+    /* News Ticker */
+    .news-box { background: #ce112610; border-left: 4px solid #ce1126; padding: 10px; margin-bottom: 20px; border-radius: 0 8px 8px 0; }
+    
+    /* Section Headers (cite: 8823.jpg, 8824.jpg) */
+    .section-header { 
+        background: #252830; padding: 10px; border-radius: 5px; 
+        margin-top: 15px; font-weight: bold; border-left: 5px solid #ce1126; 
+        color: white; text-transform: uppercase; font-size: 14px;
     }
-    .roi-text { color: #00ff88; font-family: monospace; font-size: 26px; font-weight: bold; }
-    .section-header { background: #252830; padding: 8px; border-radius: 5px; margin-top: 15px; font-weight: bold; border-left: 5px solid #ce1126; }
-    .stButton>button { width: 100%; border-radius: 5px; padding: 10px; }
+    
+    /* Main Content Cards (cite: 8820.jpg, 8823.jpg) */
+    .user-box { 
+        background-color: #1c1e24; padding: 20px; border-radius: 12px; 
+        border: 1px solid #3a3d46; margin-bottom: 5px; border-left: 6px solid #00ff88; 
+    }
+    .roi-text { color: #00ff88; font-family: 'Courier New', monospace; font-size: 32px; font-weight: bold; line-height: 1.2; }
+    .meta-label { color: #8c8f99; font-size: 14px; }
+    
+    /* Pull Out / Action Buttons (cite: 8823.jpg) */
+    .stButton>button { 
+        width: 100%; border-radius: 6px; padding: 12px; 
+        background-color: #252830; border: 1px solid #3a3d46; 
+        color: #8c8f99; font-size: 13px; text-transform: uppercase;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-NEWS_HEADLINES = ["📈 PSEi index climbs.", "🚀 Tech sector rally.", "🏦 Interest rates steady.", "📊 Bullish trend predicted."]
+NEWS_HEADLINES = [
+    "📈 PSEi index climbs as blue-chip stocks rally.",
+    "🚀 Tech sector sees 5% growth in morning trade.",
+    "🏦 Bangko Sentral hints at steady interest rates.",
+    "📊 Market analysts predict a bullish trend this week."
+]
 
 # --- 3. SESSION & LOGIN ---
 if 'user' not in st.session_state: st.session_state.user = None
@@ -57,21 +83,24 @@ if st.session_state.user is None and not st.session_state.is_boss:
             if ln in reg and str(reg[ln].get('pin')) == str(lp):
                 st.session_state.user = ln; st.rerun()
     with t2:
-        rn, rp, ref = st.text_input("FULL NAME", key="r1").upper(), st.text_input("CREATE PIN", type="password", key="r2"), st.text_input("REFERRER", key="r3").upper()
-        if st.button("REGISTER"):
-            update_user(rn, {"pin": rp, "wallet": 0.0, "inv": [], "tx": [], "ref_by": ref, "bonus_status": {}})
-            st.success("SUCCESS"); st.rerun()
+        rn = st.text_input("FULL NAME", key="r1").upper()
+        rp = st.text_input("CREATE PIN", type="password", key="r2")
+        ref = st.text_input("REFERRER NAME", key="r3").upper()
+        if st.button("REGISTER ACCOUNT"):
+            update_user(rn, {"pin": rp, "wallet": 0.0, "inv": [], "tx": [], "ref_by": ref, "reg_date": datetime.now().strftime("%Y-%m-%d"), "bonus_status": {}})
+            st.success("SUCCESSFUL"); st.rerun()
     with st.expander("🔐 ADMIN"):
         if st.text_input("ADMIN PIN", type="password") == "0102030405":
-            if st.button("ENTER BOSS"): st.session_state.is_boss = True; st.rerun()
+            if st.button("ENTER BOSS MODE"): st.session_state.is_boss = True; st.rerun()
     st.stop()
-# --- REPLACE YOUR ENTIRE 'if st.session_state.user:' SECTION WITH THIS ---
+
+# --- 4. INVESTOR DASHBOARD ---
 if st.session_state.user:
     name = st.session_state.user
     data = load_registry().get(name)
     now = datetime.now()
 
-    # 1. ROI CALCULATION ENGINE
+    # ROI Calculation
     MINUTE_RATE = (0.20 / 7) / 1440 
     changed = False
     for i in data.get('inv', []):
@@ -84,20 +113,20 @@ if st.session_state.user:
             i.update({"start": now.isoformat(), "end": (now + timedelta(days=7)).isoformat(), "roi_paid": False}); changed = True
     if changed: update_user(name, data); st.rerun()
 
-    # 2. WITHDRAWABLE BALANCE (LOCKED STYLE)
+    # Header Section
     st.markdown(f"""
         <div class="balance-card">
-            <p class="balance-label">Withdrawable Balance</p>
+            <p class="balance-label">WITHDRAWABLE BALANCE</p>
             <p class="balance-val">₱{data['wallet']:,.2f}</p>
         </div>
         <div class="news-box">
             <small style="color:#ce1126; font-weight:bold;">LIVE MARKET UPDATE:</small><br>
-            <span style="font-size:14px; color:#fff;">📈 PSEi index climbs as blue-chip stocks rally.</span>
+            <span style="font-size:14px; color:#fff;">{random.choice(NEWS_HEADLINES)}</span>
         </div>
     """, unsafe_allow_html=True)
 
-    # 3. ACTIVE CYCLES SECTION (MATCHES 8820.jpg & 8823.jpg)
-    st.markdown("<div class='section-header'>⏳ ACTIVE CYCLES</div>", unsafe_allow_html=True)
+    # Active Cycles (cite: 8820.jpg, 8823.jpg)
+    st.markdown("<div class='section-header'>⌛ ACTIVE CYCLES</div>", unsafe_allow_html=True)
     inv_list = data.get('inv', [])
     for idx, t in enumerate(reversed(inv_list)):
         actual_idx = len(inv_list) - 1 - idx
@@ -111,7 +140,7 @@ if st.session_state.user:
                 <span class='meta-label'>Total to Receive: ₱{t['amt']*0.20:,.2f}</span><br><br>
                 <b>Approved:</b> {st_t.strftime('%Y-%m-%d %I:%M %p')}<br>
                 <b>Maturity:</b> {et_t.strftime('%Y-%m-%d %I:%M %p')}<br>
-                <b style='color:#ff4b4b;'>⏳ TIME REMAINING: {str(et_t - now).split('.')[0] if now < et_t else 'MATURED'}</b>
+                <b style='color:#ff4b4b;'>⌛ TIME REMAINING: {str(et_t - now).split('.')[0] if now < et_t else 'MATURED'}</b>
             </div>
         """, unsafe_allow_html=True)
 
@@ -122,7 +151,7 @@ if st.session_state.user:
         else:
             st.button(btn_label, key=f"lock_{actual_idx}", disabled=True)
 
-    # 4. REFERRAL COMMISSIONS SECTION (MATCHES 8824.jpg)
+    # Referral Commissions (cite: 8824.jpg)
     all_u = load_registry()
     referrals = {u_n: u_i for u_n, u_i in all_u.items() if u_i.get('ref_by') == name}
 
@@ -132,9 +161,7 @@ if st.session_state.user:
             comm = f_dep * 0.20
             b_status = data.get('bonus_status', {}).get(u_n, "AVAILABLE")
             
-            # Header repeats for each block as per 8824.jpg
             st.markdown("<div class='section-header'>👥 REFERRAL COMMISSIONS</div>", unsafe_allow_html=True)
-            
             st.markdown(f"""
                 <div class='user-box'>
                     <b>Capital: ₱{f_dep:,.1f}</b><br>
@@ -142,7 +169,7 @@ if st.session_state.user:
                     <span class='meta-label'>Total to Receive: ₱{comm:,.2f}</span><br><br>
                     <b>Invitee:</b> {u_n}<br>
                     <b>Registered:</b> {u_i.get('reg_date', 'N/A')}<br>
-                    <b style='color:#ff4b4b;'>⏳ STATUS: {b_status}</b>
+                    <b style='color:#ff4b4b;'>⌛ STATUS: {b_status}</b>
                 </div>
             """, unsafe_allow_html=True)
 
@@ -153,19 +180,14 @@ if st.session_state.user:
                 st.button(f"BONUS {b_status}", key=f"lock_ref_{u_n}", disabled=True)
 
     if st.button("LOGOUT"): 
-        st.session_state.user = None
-        st.rerun()
-            
-            else:
-                # Display current status (REQUESTED, RECEIVED, or FAILED)
-                st.info(f"📌 Status: {b_status}")
-                
-# --- 5. ADMIN ---
+        st.session_state.user = None; st.rerun()
+
+# --- 5. ADMIN OVERVIEW ---
 elif st.session_state.is_boss:
-    st.title("👑 BOSS MODE")
+    st.title("👑 BOSS OVERVIEW")
     all_users = load_registry()
     for u_name, u_data in all_users.items():
-        with st.expander(f"User: {u_name} | Wallet: ₱{u_data.get('wallet'):,.2f}"):
+        with st.expander(f"USER: {u_name} | Wallet: ₱{u_data.get('wallet'):,.2f}"):
             for idx, tx in enumerate(u_data.get('tx', [])):
                 if tx['status'] == "PENDING_DEP":
                     if st.button(f"APPROVE ₱{tx['amt']:,}", key=f"a_{u_name}_{idx}"):
@@ -178,4 +200,5 @@ elif st.session_state.is_boss:
                     if st.button(f"PAY BONUS TO {u_name} for {inv_n}"):
                         f_amt = next((t['amt'] for t in all_users[inv_n].get('tx', []) if t['status'] == "SUCCESSFUL_DEP"), 0)
                         u_data['wallet'] += (f_amt * 0.20); u_data['bonus_status'][inv_n] = "RECEIVED"; update_user(u_name, u_data); st.rerun()
-    if st.button("EXIT"): st.session_state.is_boss = False; st.rerun()
+    if st.button("EXIT ADMIN"): st.session_state.is_boss = False; st.rerun()
+        
