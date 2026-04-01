@@ -23,12 +23,13 @@ def update_user(name, data):
         json.dump(reg, f, default=str)
 
 # ==========================================
-# BLOCK 2: GLOBAL STYLES (MATCHING PHOTOS)
+# ==========================================
+# BLOCK 2: GLOBAL STYLES (CAPSLOCK REMOVED)
 # ==========================================
 st.set_page_config(page_title="BPSM Official", layout="wide")
 st.markdown("""
     <style>
-    input[type="text"] { text-transform: uppercase !important; }
+    /* Removed the text-transform: uppercase line from here */
     .balance-card { background: #1c1e24; padding: 20px; border-radius: 10px; border: 1px solid #3a3d46; text-align: center; margin-bottom: 15px; }
     .balance-label { color: #8c8f99; font-size: 12px; text-transform: uppercase; }
     .balance-val { color: #00ff88; font-size: 38px; font-weight: bold; margin: 0; }
@@ -48,7 +49,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# BLOCK 3: SESSION & LOGIN SYSTEM
+# BLOCK 3: SESSION & LOGIN (NORMAL CASE)
 # ==========================================
 if 'user' not in st.session_state: st.session_state.user = None
 if 'is_boss' not in st.session_state: st.session_state.is_boss = False
@@ -57,26 +58,24 @@ if st.session_state.user is None and not st.session_state.is_boss:
     st.title("BAGONG PILIPINAS STOCK MARKET")
     t1, t2 = st.tabs(["SIGN-IN", "REGISTER"])
     with t1:
-        ln_input = st.text_input("NAME")
+        ln = st.text_input("NAME") # Removed .upper()
         lp = st.text_input("PIN", type="password")
         if st.button("LOGIN"):
-            ln = ln_input.upper() # Sync with registration
             reg = load_registry()
+            # We check the name exactly as typed
             if ln in reg and str(reg[ln].get('pin')) == str(lp):
                 st.session_state.user = ln
                 st.rerun()
+            else:
+                st.error("Invalid Name or PIN")
     with t2:
-        rn_input = st.text_input("FULL NAME", key="r1")
+        rn = st.text_input("FULL NAME", key="r1") # Removed .upper()
         rp = st.text_input("PIN", type="password", key="r2")
-        ref = st.text_input("REFERRER", key="r3").upper()
+        ref = st.text_input("REFERRER", key="r3")
         if st.button("REGISTER ACCOUNT"):
-            rn = rn_input.upper() # Store as Uppercase
             update_user(rn, {"pin": rp, "wallet": 0.0, "inv": [], "tx": [], "ref_by": ref, "reg_date": datetime.now().strftime("%Y-%m-%d")})
             st.success("SUCCESSFUL - PLEASE LOGIN")
-    with st.expander("🔐 ADMIN"):
-        if st.text_input("ADMIN PIN", type="password") == "0102030405":
-            if st.button("ENTER BOSS MODE"): st.session_state.is_boss = True; st.rerun()
-    st.stop()
+            
 
 # ==========================================
 # BLOCK 4: INVESTOR DASHBOARD ENGINE
