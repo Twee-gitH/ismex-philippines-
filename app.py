@@ -151,7 +151,14 @@ if st.session_state.user:
         else:
             st.button(btn_label, key=f"lock_{actual_idx}", disabled=True)
 
-    # Referral Commissions (cite: 8824.jpg)
+            # --- END OF ACTIVE CYCLES LOOP ---
+        if et_t <= now < grace_end:
+            if st.button(f"✅ PULL CAPITAL (₱{t['amt']:,})", key=f"p{actual_idx}"):
+                data['wallet'] += t['amt']; data['inv'].pop(actual_idx); update_user(name, data); st.rerun()
+        else:
+            st.button(btn_label, key=f"lock_{actual_idx}", disabled=True)
+
+    # >>> PASTE THE ENTIRE REFERRAL COMMISSION BLOCK HERE <<<
     all_u = load_registry()
     referrals = {u_n: u_i for u_n, u_i in all_u.items() if u_i.get('ref_by') == name}
 
@@ -178,9 +185,13 @@ if st.session_state.user:
                     data.setdefault('bonus_status', {})[u_n] = "REQUESTED"; update_user(name, data); st.rerun()
             else:
                 st.button(f"BONUS {b_status}", key=f"lock_ref_{u_n}", disabled=True)
+    # >>> END OF PASTE <<<
 
-    if st.button("LOGOUT"): 
-        st.session_state.user = None; st.rerun()
+    # --- THE LOGOUT BUTTON FOLLOWS ---
+    if st.button("LOGOUT"):
+        st.session_state.user = None
+        st.rerun()
+        
 
 # --- 5. ADMIN OVERVIEW ---
 elif st.session_state.is_boss:
