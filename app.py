@@ -94,21 +94,7 @@ if st.session_state.user is None and not st.session_state.is_boss:
             if st.button("ENTER BOSS MODE"): st.session_state.is_boss = True; st.rerun()
     st.stop()
 
-# Insert this before or after the Active Cycles section in the user dashboard
-st.markdown("<div class='section-header'>📥 DEPOSIT CAPITAL</div>", unsafe_allow_html=True)
-with st.container():
-    dep_amt = st.number_input("Amount to Deposit", min_value=500, step=500)
-    if st.button("SUBMIT DEPOSIT REQUEST"):
-        new_tx = {
-            "amt": dep_amt,
-            "type": "DEPOSIT",
-            "status": "PENDING_DEP",
-            "date": datetime.now().isoformat()
-        }
-        data.setdefault('tx', []).append(new_tx)
-        update_user(name, data)
-        st.success("Request sent to Admin for approval.")
-        
+
 
 # --- FULL CORRECTED INVESTOR DASHBOARD ---
 if st.session_state.user:
@@ -116,6 +102,28 @@ if st.session_state.user:
     data = load_registry().get(name)
     now = datetime.now()
 
+# --- 6. DEPOSIT SECTION (ADD THIS INSIDE THE USER DASHBOARD BLOCK) ---
+st.markdown("<div class='section-header'>📥 DEPOSIT CAPITAL</div>", unsafe_allow_html=True)
+with st.container():
+    dep_amt = st.number_input("Amount to Deposit", min_value=500, step=500, key="dep_input")
+    if st.button("SUBMIT DEPOSIT REQUEST"):
+        # We ensure 'tx' exists in the user's dictionary
+        if 'tx' not in data:
+            data['tx'] = []
+            
+        new_tx = {
+            "amt": dep_amt,
+            "type": "DEPOSIT",
+            "status": "PENDING_DEP",
+            "date": datetime.now().isoformat()
+        }
+        
+        data['tx'].append(new_tx)
+        update_user(name, data) # This saves it back to the JSON
+        st.success(f"Request for ₱{dep_amt:,} sent! Waiting for Admin approval.")
+        st.rerun()
+        
+    
     # 1. ROI CALC ENGINE
     MINUTE_RATE = (0.20 / 7) / 1440 
     changed = False
