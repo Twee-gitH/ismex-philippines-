@@ -1,178 +1,221 @@
 import streamlit as st
 import json
 import os
-import random
+import shutil
 from datetime import datetime, timedelta
+import time
+import pandas as pd
 
-# --- 1. DATA STORAGE ---
+# --- 1. SESSION INITIALIZER ---
+if 'user' not in st.session_state: st.session_state.user = None
+if 'page' not in st.session_state: st.session_state.page = "main"
+if 'is_boss' not in st.session_state: st.session_state.is_boss = False
+
+if not os.path.exists("receipts"):
+    os.makedirs("receipts")
+
+# --- 2. DATA ENGINE ---
 REGISTRY_FILE = "bpsm_registry.json"
+BACKUP_FILE = "bpsm_backup.json"
 
 def load_registry():
-    if os.path.exists(REGISTRY_FILE):
-        try:
-            with open(REGISTRY_FILE, "r") as f: return json.load(f)
-        except: return {}
+    for file in [REGISTRY_FILE, BACKUP_FILE]:
+        if os.path.exists(file):
+            try:
+                with open(file, "r") as f:
+                    return json.load(f)
+            except: continue
     return {}
 
 def update_user(name, data):
     reg = load_registry()
     reg[name] = data
-    with open(REGISTRY_FILE, "w") as f: 
+    with open(REGISTRY_FILE, "w") as f:
         json.dump(reg, f, default=str)
+    shutil.copy(REGISTRY_FILE, BACKUP_FILE)
 
-# --- 2. GLOBAL STYLES (MATCHING 8837.jpg) ---
+# --- 3. UI STYLING ---
 st.set_page_config(page_title="BPSM Official", layout="wide")
 st.markdown("""
     <style>
-    input[type="text"] { text-transform: uppercase !important; }
-    .balance-card { background: #1c1e24; padding: 20px; border-radius: 10px; border: 1px solid #3a3d46; text-align: center; margin-bottom: 15px; }
-    .balance-label { color: #8c8f99; font-size: 12px; text-transform: uppercase; }
-    .balance-val { color: #00ff88; font-size: 38px; font-weight: bold; margin: 0; }
-    .section-header { background: #252830; padding: 10px; border-radius: 5px; margin-top: 15px; font-weight: bold; border-left: 5px solid #ce1126; color: white; text-transform: uppercase; font-size: 14px; }
-    .user-box { background-color: #1c1e24; padding: 20px; border-radius: 12px; border: 1px solid #3a3d46; margin-bottom: 5px; border-left: 6px solid #00ff88; }
-    .roi-label { color: #00ff88; font-size: 28px; font-weight: bold; margin-top: 10px; }
-    .roi-text { color: #00ff88; font-family: 'Courier New', monospace; font-size: 38px; font-weight: bold; line-height: 1.2; }
-    .pull-out-info { border: 1px solid #3a3d46; padding: 15px; border-radius: 8px; text-align: center; background: #1c1e24; color: #8c8f99; font-size: 14px; margin-top: 5px; text-transform: uppercase; }
-    .stButton>button { width: 100%; border-radius: 6px; padding: 12px; background-color: #252830; border: 1px solid #3a3d46; color: #8c8f99; font-size: 13px; text-transform: uppercase; }
+    [data-testid="stSidebar"] { display: none; }
+    header { visibility: hidden; }
+    .stApp { background-color: #0b0c0e; color: white; }
+    .block-container { padding: 0 !important; max-width: 100% !important; }
+    .user-box { text-align: center; padding: 30px 10px; background: #111217; border-bottom: 1px solid #2a2b30; }
+    .balance-val { color: #0dcf70; font-size: 3.5rem; font-weight: 900; margin: 5px 0; }
+    .section-header { background: #1c1e24; padding: 12px 20px; margin-top: 25px; border-left: 5px solid #0dcf70; font-weight: bold; text-transform: uppercase; color: #0dcf70; }
+    .roi-text { color: #0dcf70; font-weight: bold; font-size: 1.1rem; }
+    .meta-text { color: #8c8f99; font-size: 0.85rem; margin-bottom: 2px; }
+    .timer-alert { color: #ff4b4b; font-weight: bold; font-size: 1.2rem; text-align: center; }
+    .stButton>button { border-radius: 12px !important; height: 3.5rem !important; font-weight: bold !important; width: 100%; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. SESSION & LOGIN ---
-if 'user' not in st.session_state: st.session_state.user = None
-if 'is_boss' not in st.session_state: st.session_state.is_boss = False
-
+# --- 4. ACCESS CONTROL ---
 if st.session_state.user is None and not st.session_state.is_boss:
-    st.title("BAGONG PILIPINAS STOCK MARKET")
-    t1, t2 = st.tabs(["SIGN-IN", "REGISTER"])
+    st.markdown("<div style='background: linear-gradient(135deg, #0038a8 0%, #ce1126 100%); padding: 40px 20px; text-align: center;'><h1>BAGONG PILIPINAS<br>STOCK MARKET</h1></div>", unsafe_allow_html=True)
+    t1, t2 = st.tabs(["🔑 SIGN-IN", "📝 REGISTER"])
     with t1:
-        ln, lp = st.text_input("NAME").upper(), st.text_input("PIN", type="password")
-        if st.button("LOGIN"):
+        ln = st.text_input("INVESTOR NAME", key="login_name").upper()
+        lp = st.text_input("SECURE PIN", type="password", max_chars=6, key="login_pin")
+        if st.button("VERIFY & ACCESS"):
             reg = load_registry()
-            if ln in reg and str(reg[ln].get('pin')) == str(lp):
-                st.session_state.user = ln; st.rerun()
+            if ln in reg and reg[ln].get('pin') == lp:
+                st.session_state.user = ln
+                st.rerun()
+            elif ln == "ADMIN" and lp == "000000": # Admin Shortcut
+                st.session_state.is_boss = True
+                st.rerun()
+            else: st.error("Invalid Credentials")
     with t2:
-        rn, rp, ref = st.text_input("FULL NAME", key="r1").upper(), st.text_input("PIN", type="password", key="r2"), st.text_input("REFERRER", key="r3").upper()
-        if st.button("REGISTER ACCOUNT"):
-            update_user(rn, {"pin": rp, "wallet": 0.0, "inv": [], "tx": [], "ref_by": ref, "reg_date": datetime.now().strftime("%Y-%m-%d")})
-            st.success("SUCCESSFUL"); st.rerun()
-    with st.expander("🔐 ADMIN"):
-        if st.text_input("ADMIN PIN", type="password") == "0102030405":
-            if st.button("ENTER BOSS MODE"): st.session_state.is_boss = True; st.rerun()
+        rn = st.text_input("FULL LEGAL NAME", key="reg_name").upper()
+        rp = st.text_input("CREATE 6-DIGIT PIN", type="password", max_chars=6, key="reg_pin")
+        referrer = st.text_input("REFERRER NAME (REQUIRED)", key="reg_ref").upper()
+        if st.button("CREATE ACCOUNT"):
+            reg = load_registry()
+            if not referrer or (referrer != "DIRECT" and referrer not in reg): 
+                st.error("Valid Referrer required. (Type DIRECT if none)")
+            elif rn in reg: st.error("Already registered.")
+            elif rn and len(rp) == 6:
+                update_user(rn, {"pin": rp, "wallet": 0.0, "inv": [], "tx": [], "ref_by": referrer, "bonus_claimed": False})
+                st.success("Account Created!"); time.sleep(1.5); st.rerun()
     st.stop()
 
-# --- 4. INVESTOR DASHBOARD ---
+# --- 5. INVESTOR PORTAL ---
 if st.session_state.user:
     name = st.session_state.user
-    data = load_registry().get(name)
+    reg = load_registry()
+    data = reg[name]
     now = datetime.now()
 
-    # ROI ENGINE
-    MINUTE_RATE = (0.20 / 7) / 1440 
-    changed = False
+    # --- AUTO-PROCESSOR (ROI & RENEWAL) ---
+    data_changed = False
     for i in data.get('inv', []):
-        st_t, et_t = datetime.fromisoformat(i['start']), datetime.fromisoformat(i['end'])
-        calc_now = min(now, et_t)
-        i['accumulated_roi'] = max(0, i['amt'] * (((calc_now - st_t).total_seconds() / 60) * MINUTE_RATE))
-        if now >= et_t and not i.get('roi_paid', False):
-            data['wallet'] += (i['amt'] * 0.20); i['roi_paid'] = True; changed = True
-    if changed: update_user(name, data); st.rerun()
-
-    st.markdown(f'<div class="balance-card"><p class="balance-label">WITHDRAWABLE BALANCE</p><p class="balance-val">₱{data["wallet"]:,.2f}</p></div>', unsafe_allow_html=True)
-
-    # --- 5. ACTION BUTTONS ---
-    c1, c2, c3 = st.columns(3)
-    
-    with c1:
-        with st.expander("📥 DEPOSIT", expanded=True):
-            d_amt = st.number_input("Amount (Min 1000)", 1000, step=500, key="dep_input")
+        try:
+            m_time = datetime.fromisoformat(i['end'])
+            if now >= m_time and not i.get('roi_paid', False):
+                profit = i['amt'] * 0.20
+                data['wallet'] += profit
+                i['roi_paid'] = True
+                data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "WEEKLY ROI CREDIT", "amt": profit, "status": "SUCCESSFUL"})
+                data_changed = True
             
-            # File uploader only appears if amount is 1000 or more
-            if d_amt >= 1000:
-                file = st.file_uploader("Upload Receipt", type=['jpg','png','jpeg'], key="dep_file")
-                
-                if file is not None:
-                    # Highlight button green when file is ready
-                    st.markdown('<style>div.stButton > button:first-child { background-color: #00ff88 !important; color: black !important; font-weight: bold; }</style>', unsafe_allow_html=True)
-                    if st.button("CONFIRM DEPOSIT", key="confirm_dep"):
-                        if 'tx' not in data: data['tx'] = []
-                        data['tx'].append({
-                            "type": "DEP",
-                            "amt": d_amt,
-                            "status": "PENDING",
-                            "receipt": file.name,
-                            "date": datetime.now().strftime("%Y-%m-%d %I:%M %p")
-                        })
-                        update_user(name, data)
-                        st.success(f"Sent to Admin!")
-                        st.rerun()
-            else:
-                st.warning("Minimum ₱1,000 required")
+            if now >= (m_time + timedelta(hours=1)):
+                i['start'] = now.isoformat()
+                i['end'] = (now + timedelta(days=7)).isoformat()
+                i['roi_paid'] = False 
+                data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "AUTO-RENEWAL (7 DAYS)", "amt": i['amt'], "status": "SUCCESSFUL"})
+                data_changed = True
+        except: continue
+    
+    if data_changed: update_user(name, data); st.rerun()
 
-    with c2:
-        with st.expander("💸 WITHDRAW"):
-            w_amt = st.number_input("Amount", 100.0, float(data['wallet']) if data['wallet'] > 100 else 100.0, key="w_val")
-            bn, an, anum = st.text_input("Bank"), st.text_input("Name"), st.text_input("Number")
-            if st.button("CONFIRM WITHDRAW"):
-                if data['wallet'] >= w_amt:
-                    data['wallet'] -= w_amt
-                    data.setdefault('tx', []).append({"type": "WITHDRAW", "amt": w_amt, "status": "PENDING", "bank": bn, "acc_name": an, "acc_num": anum, "date": now.strftime("%Y-%m-%d %I:%M %p")})
-                    update_user(name, data); st.success("Requested!"); st.rerun()
-    with c3:
-        with st.expander("♻️ REINVEST"):
-            r_amt = st.number_input("Reinvest", 1000.0, float(data['wallet']) if data['wallet'] > 1000 else 1000.0, key="r_val")
-            if st.button("CONFIRM REINVEST"):
-                if data['wallet'] >= r_amt:
-                    data['wallet'] -= r_amt
-                    data.setdefault('inv', []).append({"amt": r_amt, "start": now.isoformat(), "end": (now + timedelta(days=7)).isoformat(), "roi_paid": False})
-                    update_user(name, data); st.success("Done!"); st.rerun()
+    st.markdown(f"<div class='user-box'><p style='color:#8c8f99;'>WITHDRAWABLE BALANCE</p><h1 class='balance-val'>₱{data['wallet']:,.2f}</h1><p style='color:#8c8f99;'>Account: {name}</p></div>", unsafe_allow_html=True)
 
-    # --- 6. ACTIVE CYCLES (MATCHING 8833.jpg) ---
-    st.markdown("<div class='section-header'>⌛ ACTIVE CYCLES</div>", unsafe_allow_html=True)
-    inv_list = data.get('inv', [])
-    for idx, t in enumerate(reversed(inv_list)):
-        actual_idx = len(inv_list) - 1 - idx
-        st_t, et_t = datetime.fromisoformat(t['start']), datetime.fromisoformat(t['end'])
-        rem = str(et_t - now).split('.')[0] if now < et_t else "MATURED"
-        
-        st.markdown(f"""
-            <div class='user-box'>
-                <div style='color:white; font-size:16px;'>Capital: ₱{t['amt']:,.1f}</div>
-                <div class='roi-label'>Accumulated ROI:</div>
-                <div class='roi-text'>₱{t.get('accumulated_roi', 0):,.4f}</div>
-                <div style='color:#8c8f99; font-size:13px;'>Total to Receive: ₱{t['amt']*0.20:,.2f}</div>
-                <br>
-                <div style='color:white; font-size:14px;'>
-                    <b>Approved:</b> {st_t.strftime('%Y-%m-%d %I:%M %p')}<br>
-                    <b>Maturity:</b> {et_t.strftime('%Y-%m-%d %I:%M %p')}
-                </div>
-                <div style='color:#ff4b4b; font-weight:bold; font-size:15px; margin-top:10px;'>⌛ TIME REMAINING: {rem}</div>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        if now < et_t:
-            st.markdown(f"<div class='pull-out-info'>AVAILABLE TO PULL OUT CAPITAL FROM {et_t.strftime('%b %d, %I:%M %p')}</div>", unsafe_allow_html=True)
+    # --- NAVIGATION ---
+    if st.session_state.page == "dep":
+        st.markdown("<div class='section-header'>📥 DEPOSIT</div>", unsafe_allow_html=True)
+        d_amt = st.number_input("Amount", min_value=1000.0)
+        receipt = st.file_uploader("Receipt", type=['jpg','png'])
+        if st.button("SUBMIT"):
+            if receipt:
+                f_path = f"receipts/{name}_{int(time.time())}.png"
+                with open(f_path, "wb") as f: f.write(receipt.getbuffer())
+                data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "DEPOSIT", "amt": d_amt, "status": "PENDING_DEP", "receipt_path": f_path})
+                update_user(name, data); st.session_state.page = "main"; st.rerun()
+        if st.button("⬅️ BACK"): st.session_state.page = "main"; st.rerun()
+
+    elif st.session_state.page == "wd":
+        st.markdown("<div class='section-header'>📤 WITHDRAW</div>", unsafe_allow_html=True)
+        w_amt = st.number_input("Amount", min_value=1000.0, max_value=max(1000.0, data['wallet']))
+        if st.button("SUBMIT"):
+            data['wallet'] -= w_amt
+            data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "WITHDRAWAL", "amt": w_amt, "status": "PENDING_WD"})
+            update_user(name, data); st.session_state.page = "main"; st.rerun()
+        if st.button("⬅️ BACK"): st.session_state.page = "main"; st.rerun()
+
+    elif st.session_state.page == "reinvest":
+        st.markdown("<div class='section-header'>♻️ RE-INVEST</div>", unsafe_allow_html=True)
+        r_amt = st.number_input("Re-invest Amount", min_value=1000.0, max_value=max(1000.0, data['wallet']))
+        if st.button("START CYCLE"):
+            data['wallet'] -= r_amt
+            st_t = datetime.now()
+            data.setdefault('inv', []).append({"amt": r_amt, "start": st_t.isoformat(), "end": (st_t + timedelta(days=7)).isoformat(), "roi_paid": False})
+            data.setdefault('tx', []).append({"date": st_t.strftime("%Y-%m-%d %H:%M"), "type": "RE-INVESTMENT", "amt": r_amt, "status": "SUCCESSFUL"})
+            update_user(name, data); st.session_state.page = "main"; st.rerun()
+        if st.button("⬅️ BACK"): st.session_state.page = "main"; st.rerun()
+
+    else:
+        c1, c2, c3 = st.columns(3)
+        with c1: 
+            if st.button("📥 DEPOSIT"): st.session_state.page = "dep"; st.rerun()
+        with c2: 
+            if st.button("📤 WITHDRAW"): st.session_state.page = "wd"; st.rerun()
+        with c3:
+            if st.button("♻️ RE-INVEST"): st.session_state.page = "reinvest"; st.rerun()
+
+        # Active Cycles
+        st.markdown("<div class='section-header'>⏳ ACTIVE CYCLES</div>", unsafe_allow_html=True)
+        if not data.get('inv'): st.write("No active interest running.")
         else:
-            if st.button(f"✅ PULL OUT CAPITAL (₱{t['amt']:,})", key=f"pull_{actual_idx}"):
-                data['wallet'] += t['amt']
-                data['inv'].pop(actual_idx)
-                update_user(name, data)
-                st.rerun()
+            for idx, t in enumerate(reversed(data['inv'])):
+                actual_idx = len(data['inv']) - 1 - idx
+                start_t, end_t = datetime.fromisoformat(t['start']), datetime.fromisoformat(t['end'])
+                st.markdown(f"<div style='background:#1c1e24; padding:15px; border-radius:15px; border:1px solid #3a3d46; margin-bottom:10px;'><div class='meta-text'>📅 DEPOSIT: {start_t.strftime('%Y-%m-%d %I:%M %p')}</div><div class='meta-text'>🏁 MATURITY: {end_t.strftime('%Y-%m-%d %I:%M %p')}</div><div style='display:flex; justify-content:space-between; margin-top:5px;'><span style='font-weight:bold;'>Capital: ₱{t['amt']:,}</span><span class='roi-text'>TOTAL ROI: ₱{t['amt']*0.20:,.2f}</span></div></div>", unsafe_allow_html=True)
+                
+                if now < end_t:
+                    st.button(f"LOCKED (⏳ {str(end_t - now).split('.')[0]})", key=f"l_{actual_idx}", disabled=True)
+                elif end_t <= now < (end_t + timedelta(hours=1)):
+                    if st.button(f"✅ PULL CAPITAL (₱{t['amt']:,})", key=f"pull_{actual_idx}"):
+                        data['wallet'] += t['amt']
+                        data['inv'].pop(actual_idx)
+                        data.setdefault('tx', []).append({"date": now.strftime("%Y-%m-%d %H:%M"), "type": "CAPITAL PULL-OUT", "amt": t['amt'], "status": "SUCCESSFUL"})
+                        update_user(name, data); st.rerun()
 
-    if st.button("LOGOUT"):
-        st.session_state.user = None; st.rerun()
-
-# --- 7. ADMIN PANEL ---
-elif st.session_state.is_boss:
-    st.title("👑 BOSS OVERVIEW")
-    all_u = load_registry()
-    for u_n, u_d in all_u.items():
-        for tx in u_d.get('tx', []):
-            if tx['status'] == "PENDING":
-                st.write(f"USER: {u_n} | {tx['type']} | ₱{tx['amt']} | {tx.get('date')}")
-                if st.button(f"APPROVE {u_n} {tx['amt']} ##{random.randint(0,999)}"):
-                    tx['status'] = "SUCCESSFUL"
-                    if tx['type'] == "DEP":
-                        u_d.setdefault('inv', []).append({"amt": tx['amt'], "start": datetime.now().isoformat(), "end": (datetime.now() + timedelta(days=7)).isoformat(), "roi_paid": False})
-                    update_user(u_n, u_d); st.rerun()
-    if st.button("EXIT ADMIN"): st.session_state.is_boss = False; st.rerun()
+        # --- RESTORED REFERRAL SECTION ---
+        st.markdown("<div class='section-header'>👥 MY REFERRALS</div>", unsafe_allow_html=True)
+        all_users = load_registry()
+        # Find anyone who has this user's name as their 'ref_by'
+        my_referrals = [{"INVITEE": u, "CAPITAL": sum([i['amt'] for i in info.get('inv', [])])} 
+                        for u, info in all_users.items() if info.get('ref_by') == name]
         
+        if my_referrals:
+            ref_df = pd.DataFrame(my_referrals)
+            st.table(ref_df)
+            total_ref_cap = sum([r['CAPITAL'] for r in my_referrals])
+            st.write(f"**Commission Earned (5%):** ₱{total_ref_cap * 0.05:,.2f}")
+        else:
+            st.info("No successful referrals yet.")
+
+        # History
+        st.markdown("<div class='section-header'>📜 HISTORY</div>", unsafe_allow_html=True)
+        for t in reversed(data.get('tx', [])):
+            st.write(f"{t['date']} | {t['type']} | ₱{t['amt']:,} | {t['status']}")
+
+    if st.sidebar.button("LOGOUT"): st.session_state.user = None; st.rerun()
+
+# --- 6. BOSS PANEL ---
+elif st.session_state.is_boss:
+    all_users = load_registry()
+    st.markdown("### 👑 MASTER CONTROL")
+    st.markdown("<div class='section-header'>📋 INVESTOR DATABASE</div>", unsafe_allow_html=True)
+    db = [{"NAME": u, "PIN": i.get('pin'), "WALLET": f"₱{i.get('wallet',0):,.2f}", "REFERRER": i.get('ref_by','DIRECT')} for u,i in all_users.items()]
+    st.table(pd.DataFrame(db))
+
+    st.markdown("<div class='section-header'>🔔 PENDING ACTIONS</div>", unsafe_allow_html=True)
+    for u_name, u_info in all_users.items():
+        for idx, tx in enumerate(u_info.get('tx', [])):
+            if tx['status'] == "PENDING_DEP":
+                if st.button(f"Approve ₱{tx['amt']:,} Deposit: {u_name}"):
+                    all_users[u_name]['tx'][idx]['status'] = "SUCCESSFUL_DEP"
+                    st_t = datetime.now()
+                    all_users[u_name].setdefault('inv', []).append({"amt": tx['amt'], "start": st_t.isoformat(), "end": (st_t + timedelta(days=7)).isoformat(), "roi_paid": False})
+                    update_user(u_name, all_users[u_name]); st.rerun()
+            elif tx['status'] == "PENDING_WD":
+                if st.button(f"Approve ₱{tx['amt']:,} Withdrawal: {u_name}"):
+                    all_users[u_name]['tx'][idx]['status'] = "SUCCESSFUL_WD"
+                    update_user(u_name, all_users[u_name]); st.rerun()
+    
+    if st.button("EXIT ADMIN"): st.session_state.is_boss = False; st.rerun()
+    
