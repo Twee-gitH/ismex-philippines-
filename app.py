@@ -98,7 +98,7 @@ if st.session_state.user:
     # ==========================================
     # BLOCK 5: DEPOSIT (FIXED HIGHLIGHT LOGIC)
     # ==========================================
-        with c1:
+with c1:
         # --- DEPOSIT CAPITAL BLOCK ---
         with st.expander("📥 DEPOSIT", expanded=True):
             # STEP 1: Enter Amount
