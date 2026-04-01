@@ -56,7 +56,7 @@ st.markdown("""
 
 # --- 4. ACCESS CONTROL (ENHANCED REFERRAL & PIN RULES) ---
 if st.session_state.user is None and not st.session_state.is_boss:
-    # CSS to force ALL-CAPS visually in the input boxes
+    # Force ALL-CAPS visually in the input boxes
     st.markdown("""
         <style>
         input { text-transform: uppercase; }
@@ -65,6 +65,7 @@ if st.session_state.user is None and not st.session_state.is_boss:
         """, unsafe_allow_html=True)
 
     st.markdown("<div style='background: linear-gradient(135deg, #0038a8 0%, #ce1126 100%); padding: 40px 20px; text-align: center;'><h1>BAGONG PILIPINAS<br>STOCK MARKET</h1></div>", unsafe_allow_html=True)
+    
     t1, t2 = st.tabs(["🔑 SIGN-IN", "📝 REGISTER"])
     
     with t1:
@@ -75,7 +76,8 @@ if st.session_state.user is None and not st.session_state.is_boss:
             if ln in reg and reg[ln].get('pin') == lp:
                 st.session_state.user = ln
                 st.rerun()
-            else: st.error("❌ INVALID CREDENTIALS")
+            else: 
+                st.error("❌ INVALID CREDENTIALS")
             
     with t2:
         st.warning("⚠️ **IMPORTANT:** PLEASE INPUT ONLY YOUR LEGAL FIRST NAME AND LAST NAME.")
@@ -85,7 +87,6 @@ if st.session_state.user is None and not st.session_state.is_boss:
         rp1 = st.text_input("CREATE 6-DIGIT PIN", type="password", max_chars=6, key="reg_pin1")
         rp2 = st.text_input("CONFIRM 6-DIGIT PIN", type="password", max_chars=6, key="reg_pin2")
         
-        # Updated Referral Label and Info
         st.error("🚨 **REFERRAL RULE:** ONLY ACTIVE INVESTORS ARE ALLOWED TO REFER NEW USERS.")
         referrer = st.text_input("REFERRER NAME (ACTIVE INVESTOR ONLY)", key="reg_ref").upper()
         
@@ -94,19 +95,18 @@ if st.session_state.user is None and not st.session_state.is_boss:
             final_name = rn.strip().upper()
             name_parts = final_name.split()
             
-            # Validation Checks
             if len(name_parts) < 2:
                 st.error("❌ PLEASE INPUT BOTH YOUR LEGAL FIRST NAME AND LAST NAME.")
             elif not rp1.isdigit():
-                st.error("❌ PIN ERROR: NUMBERS ONLY! LETTERS AND SPECIAL CHARACTERS ARE NOT ALLOWED.")
+                st.error("❌ PIN ERROR: NUMBERS ONLY!")
             elif rp1 != rp2:
-                st.error("❌ PINS DO NOT MATCH. PLEASE RETYPE YOUR PIN.")
+                st.error("❌ PINS DO NOT MATCH.")
             elif len(rp1) != 6:
                 st.error("❌ PIN MUST BE EXACTLY 6 DIGITS.")
             elif not referrer or referrer not in reg:
                 st.error("❌ VALID REFERRER REQUIRED.")
             elif not reg[referrer].get('inv'):
-                st.error(f"❌ {referrer} IS NOT AN ACTIVE INVESTOR. ONLY ACTIVE INVESTORS CAN REFER.")
+                st.error(f"❌ {referrer} IS NOT AN ACTIVE INVESTOR.")
             elif final_name in reg:
                 st.error("❌ THIS LEGAL NAME IS ALREADY REGISTERED.")
             else:
@@ -114,23 +114,24 @@ if st.session_state.user is None and not st.session_state.is_boss:
                     "pin": rp1, "wallet": 0.0, "inv": [], "tx": [], 
                     "ref_by": referrer, "claimed_refs": []
                 })
-                st.success("✅ ACCOUNT CREATED SUCCESSFULLY!"); time.sleep(1.5); st.rerun()
-    st.stop()
-        # ... (rest of your registration logic) ...
-    
-    st.markdown("---") # Visual separator
+                st.success("✅ ACCOUNT CREATED!"); time.sleep(1.5); st.rerun()
+
+    # --- ADMIN ACCESS SECTION ---
+    # This stays visible because it is BEFORE the st.stop()
+    st.markdown("---")
     with st.expander("🔐 SYSTEM ADMINISTRATION"):
-        admin_pin = st.text_input("ADMIN ACCESS PIN", type="password")
+        admin_pin = st.text_input("ADMIN ACCESS PIN", type="password", key="boss_pin_input")
         if st.button("LOG IN AS BOSS"):
-            # Replace "000000" with your preferred master pin
-            if admin_pin == "000000": 
+            if admin_pin == "000000": # Replace with your actual admin pin
                 st.session_state.is_boss = True
                 st.rerun()
             else:
-                st.error("UNAUTHORIZED ACCESS")
+                st.error("❌ UNAUTHORIZED")
 
+    # This is the "Gatekeeper" - nothing below this line runs if not logged in
     st.stop()
-    
+
+
     
     
     
