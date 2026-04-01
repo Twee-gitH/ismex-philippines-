@@ -148,4 +148,3 @@ elif st.session_state.is_boss:
                         f_amt = next((t['amt'] for t in all_users[inv_n].get('tx', []) if t['status'] == "SUCCESSFUL_DEP"), 0)
                         u_data['wallet'] += (f_amt * 0.20); u_data['bonus_status'][inv_n] = "RECEIVED"; update_user(u_name, u_data); st.rerun()
     if st.button("EXIT"): st.session_state.is_boss = False; st.rerun()
-        
