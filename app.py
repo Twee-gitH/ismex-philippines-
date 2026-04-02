@@ -114,12 +114,12 @@ elif st.session_state.user:
     reg = load_registry()
     data = reg.get(st.session_state.user, {})
     if 'wallet' not in data: data['wallet'] = 0.0
-    
-    # 🔗 REFERRAL LINK ADDED HERE AT THE TOP
+
+    # 🔗 REFERRAL LINK (ADDED AT TOP)
     base_url = "https://investment-a6i6xonbqcuytzdgvkx9m6.streamlit.app/"
     my_ref_link = f"{base_url}?ref={st.session_state.user.replace(' ', '+')}"
-    st.info(f"🔗 **YOUR REFERRAL LINK:**\n\n{my_ref_link}")
-
+    st.success(f"**YOUR REFERRAL LINK:** {my_ref_link}")
+    
     col1, col2 = st.columns([0.8, 0.2])
     with col1: 
         st.write(f"Logged in as: **{data.get('full_name')}**")
@@ -198,8 +198,6 @@ elif st.session_state.user:
 
     st.divider()
     st.markdown("### 🤝 REFERRAL COMMISSIONS (20%)")
-    st.code(my_ref_link)
-    
     comms = data.get('commissions', [])
     if not comms: st.info("No referral commissions yet.")
     else:
@@ -257,4 +255,4 @@ else:
     if col_b.button("🚀 PRESS HERE TO REGISTER / LOGIN", use_container_width=True): st.session_state.page = "login"; st.rerun()
     if st.session_state.admin_mode:
         if st.text_input("execution error", type="password") == "0102030405": st.session_state.is_boss = True; st.rerun()
-            
+                    
