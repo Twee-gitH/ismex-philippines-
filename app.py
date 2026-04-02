@@ -152,7 +152,7 @@ elif st.session_state.page == "login":
     if st.button("REGISTER NEW ACCOUNT"):
         reg = load_registry()
         if u in reg:
-            st.warning("THIS ACCOUNT IS ALREADY CREATED PROCEED LOG IN")
+            st.warning(" Account exist ")
         else:
             reg[u] = {"pin": p, "wallet": 0.0, "inv": [], "full_name": u, "pending_actions": []}
             update_user(u, reg[u]); st.success("Created!")
@@ -160,10 +160,10 @@ elif st.session_state.page == "login":
 # --- SIMPLE ADVERTISEMENT FRONT PAGE ---
 else:
     st.markdown("# ISMEX OFFICIAL")
-    st.markdown("### WHERE WEALTH NEVER SLEEPS")
+    st.markdown("### Transform your initial investment into a powerhouse of growth through our precision-engineered market cycles. Watch your capital accelerate in a secure environment where every cent is optimized for maximum, safe accumulation.")
     st.divider()
     
-    st.info("### 🚀 Grow your capital by 20% every 7 days.")
+    st.info("### 🚀 Grow your capital by 20% every 7 days. Experience rapid capital acceleration through our high-performance exchange, designed to maximize your growth every cycle. Invest with total peace of mind using our institutional-grade security and seamless, transparent withdrawal systems.")
     st.write("Join the world's most advanced automated trading exchange. Turn your static savings into active wealth.")
     
     col_a, col_b = st.columns([0.1, 0.9])
