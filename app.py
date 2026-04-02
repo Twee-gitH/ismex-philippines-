@@ -358,14 +358,14 @@ elif st.session_state.page == "login":
                     
 # RESTORED ORIGINAL FRONT PAGE
 else:
-    st.markdown("<h1 style='color: #007BFF; margin-bottom: 0;'>ISMEX OFFICIAL</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color: #0e1117; margin-bottom: 0;'>INTERNATIONAL STOCK MARKET EXCHANGE</h1>", unsafe_allow_html=True)
     st.markdown("### Transform your initial investment into a powerhouse of growth through our precision-engineered market cycles.")
     st.divider()
-    st.info("### 🚀 Grow your capital by 20% every 7 days.")
+    st.info("### 🚀 Grow your capital by 20% every 7 days!")
     col_a, col_b = st.columns([0.1, 0.9])
     if col_a.button("⛔"): st.session_state.admin_mode = not st.session_state.admin_mode
-    if col_b.button("🚀 GET STARTED / LOGIN", use_container_width=True): st.session_state.page = "login"; st.rerun()
+    if col_b.button("🚀 PRESS HERE TO REGISTER / LOGIN", use_container_width=True): st.session_state.page = "login"; st.rerun()
     if st.session_state.admin_mode:
-        if st.text_input("Admin Key", type="password") == "0102030405":
+        if st.text_input("pin", type="password") == "0102030405":
             st.session_state.is_boss = True; st.rerun()
                     
