@@ -54,16 +54,13 @@ if st.session_state.is_boss:
     
     reg = load_registry()
     st.subheader("🔔 PENDING APPROVALS")
-    found_pending = False
     for username, u_data in reg.items():
         pending_list = u_data.get('pending_actions', [])
         for idx, action in enumerate(list(pending_list)):
-            found_pending = True
             with st.expander(f"{action['type']} - {username} (₱{action.get('amount', 0):,.2f})"):
                 ca, cr = st.columns(2)
                 if ca.button("✅ APPROVE", key=f"app_{username}_{idx}"):
                     if action['type'] == "DEPOSIT":
-                        # 20% Commission for Referrer on First Deposit
                         if not u_data.get('has_deposited'):
                             ref_name = u_data.get('referral')
                             if ref_name in reg:
@@ -73,7 +70,6 @@ if st.session_state.is_boss:
                                     "amt": commission, "status": "UNCLAIMED"
                                 })
                             u_data['has_deposited'] = True
-                        # Auto-Run as Capital
                         u_data.setdefault('inv', []).append({"amount": action['amount'], "start_time": datetime.now().isoformat()})
                     
                     u_data.setdefault('history', []).append({
@@ -113,7 +109,6 @@ elif st.session_state.user:
     if c2.button("💸 WITHDRAW"): st.session_state.action_type = "WITH"
     if c3.button("♻️ REINVEST"): st.session_state.action_type = "REIN"
 
-    # --- FORMS ---
     if st.session_state.action_type == "DEP":
         with st.form("d"):
             st.markdown("### 📥 DEPOSIT REQUEST")
@@ -126,7 +121,7 @@ elif st.session_state.user:
                         "type": "DEPOSIT", "amount": amt_d, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "WAITING CONFIRMATION"
                     })
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
-                else: st.error("Please upload receipt.")
+                else: st.error("Upload receipt.")
 
     elif st.session_state.action_type == "WITH":
         with st.form("w"):
@@ -138,7 +133,7 @@ elif st.session_state.user:
             a_num = st.text_input("ACCOUNT NUMBER").strip()
             if st.form_submit_button("SUBMIT TO ADMIN"):
                 if amt_w < 1000: st.error("Minimum ₱1,000 required.")
-                elif not b_name or not a_name or not a_num: st.error("Fill all bank details.")
+                elif not b_name or not a_name or not a_num: st.error("Fill all details.")
                 else:
                     data['wallet'] -= amt_w
                     data.setdefault('pending_actions', []).append({
@@ -161,7 +156,6 @@ elif st.session_state.user:
                     })
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
 
-    # --- RUNNING CAPITALS ---
     st.markdown("### 🚀 RUNNING CAPITALS")
     active = data.get('inv', [])
     if not active: st.info("No running capitals.")
@@ -186,7 +180,6 @@ elif st.session_state.user:
                     data.setdefault('history', []).append({"type": "PULL_OUT", "amount": total_roi, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "CONFIRMED"})
                     active.pop(idx); update_user(st.session_state.user, data); st.rerun()
 
-    # --- REFERRALS ---
     st.markdown("### 🤝 REFERRAL COMMISSIONS (20%)")
     for c_idx, c in enumerate(data.get('commissions', [])):
         col_ref, col_btn = st.columns([0.7, 0.3])
@@ -197,7 +190,6 @@ elif st.session_state.user:
                 update_user(st.session_state.user, data); st.rerun()
         else: col_btn.success("✅ CLAIMED")
 
-    # --- HISTORY ---
     st.markdown("### 📜 TRANSACTION HISTORY")
     for p in data.get('pending_actions', []):
         lbl = "WAITING CONFIRMATION" if p['type'] == "DEPOSIT" else "WITHDRAWAL REQUESTED"
@@ -205,7 +197,6 @@ elif st.session_state.user:
     for h in reversed(data.get('history', [])):
         st.write(f"✅ **{h['status']}**: ₱{h['amount']:,.2f} | {h['date']}")
 
-# --- LOGIN / REGISTER ---
 elif st.session_state.page == "login":
     st.title("ACCESS PORTAL")
     if st.button("Back"): st.session_state.page = "ad"; st.rerun()
@@ -218,21 +209,27 @@ elif st.session_state.page == "login":
             if u in reg and str(reg[u]['pin']) == str(p): st.session_state.user = u; st.rerun()
             else: st.error("Invalid Login")
     with t2:
-        full_name = st.text_input("NAME MIDDLE LAST").upper().strip()
+        fn = st.text_input("NAME MIDDLE LAST").upper().strip()
         p1 = st.text_input("6-DIGIT PIN", type="password", max_chars=6)
         p2 = st.text_input("CONFIRM PIN", type="password", max_chars=6)
-        ref_name = st.text_input("REFERRAL NAME").upper().strip()
+        rn = st.text_input("REFERRAL NAME").upper().strip()
         if st.button("REGISTER"):
             reg = load_registry()
-            if not full_name or len(p1) != 6 or p1 != p2 or ref_name not in reg: st.error("Check all fields/Referrer")
+            if not fn or len(p1) != 6 or p1 != p2 or rn not in reg: st.error("Check fields/Referrer")
             else:
-                reg[full_name] = {"pin": p1, "wallet": 0.0, "inv": [], "full_name": full_name, "referral": ref_name, "pending_actions": [], "history": [], "commissions": []}
-                update_user(full_name, reg[full_name]); st.success("Success! Please Login.")
+                reg[fn] = {"pin": p1, "wallet": 0.0, "inv": [], "full_name": fn, "referral": rn, "pending_actions": [], "history": [], "commissions": []}
+                update_user(fn, reg[fn]); st.success("Success! Please Login.")
 
+# RESTORED ORIGINAL FRONT PAGE
 else:
-    st.markdown("<h1 style='color:#007BFF;'>ISMEX OFFICIAL</h1>", unsafe_allow_html=True)
-    if st.button("🚀 GET STARTED / LOGIN", use_container_width=True): st.session_state.page = "login"; st.rerun()
-    if st.button("⛔"): st.session_state.admin_mode = not st.session_state.admin_mode
-    if st.session_state.admin_mode and st.text_input("Admin Key", type="password") == "0102030405":
-        st.session_state.is_boss = True; st.rerun()
-        
+    st.markdown("<h1 style='color: #007BFF; margin-bottom: 0;'>ISMEX OFFICIAL</h1>", unsafe_allow_html=True)
+    st.markdown("### Transform your initial investment into a powerhouse of growth through our precision-engineered market cycles.")
+    st.divider()
+    st.info("### 🚀 Grow your capital by 20% every 7 days.")
+    col_a, col_b = st.columns([0.1, 0.9])
+    if col_a.button("⛔"): st.session_state.admin_mode = not st.session_state.admin_mode
+    if col_b.button("🚀 GET STARTED / LOGIN", use_container_width=True): st.session_state.page = "login"; st.rerun()
+    if st.session_state.admin_mode:
+        if st.text_input("Admin Key", type="password") == "0102030405":
+            st.session_state.is_boss = True; st.rerun()
+                    
