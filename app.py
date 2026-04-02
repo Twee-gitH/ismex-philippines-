@@ -99,44 +99,72 @@ elif st.session_state.page == "login" and not st.session_state.user and not st.s
 
     st.markdown("---")
 
+    # --- MEMBER LOG IN SECTION ---
     if st.session_state.sub_page == "login_form":
         st.info("USER NAME: INPUT YOUR 1ST NAME, MIDDLE NAME, AND LAST NAME")
-        u_name_in = st.text_input("FULL USERNAME (ALL CAPS)", key="l_u").upper().strip()
-        st.info("PASSWORD: INPUT YOUR 6-DIGIT NUMBERS ONLY")
+        u_name_in = st.text_input("FULL USERNAME", key="l_u").upper().strip()
+        
+        st.info("PASSWORD: INPUT YOUR 6-DIGIT NUMBERS")
         u_pin = st.text_input("6-DIGIT PIN", type="password", max_chars=6, key="l_p")
         
-        if st.button("ENTER DASHBOARD"):
+        # Physical Button to Enter
+        if st.button("LOG IN NOW", key="btn_login_final", use_container_width=True):
             reg = load_registry()
-            formatted_name = u_name_in.replace(" ", "_")
-            user_data = reg.get(u_name_in) or reg.get(formatted_name)
+            formatted_underscore = u_name_in.replace(" ", "_")
+            user_data = reg.get(u_name_in) or reg.get(formatted_underscore)
+            
             if user_data and str(user_data.get('pin')) == str(u_pin):
-                st.session_state.user = u_name_in if u_name_in in reg else formatted_name
+                st.session_state.user = u_name_in if u_name_in in reg else formatted_underscore
                 st.rerun()
-            else: st.error("Invalid Username or 6-Digit PIN")
+            else:
+                st.error("Invalid Username or PIN.")
 
+    # --- REGISTER AS MEMBER SECTION ---
     elif st.session_state.sub_page == "reg_form":
         st.warning("PLEASE USE CAPSLOCK FOR ALL NAME FIELDS")
-        f_name = st.text_input("FIRST NAME", key="reg_f").upper()
-        m_name = st.text_input("MIDDLE NAME", key="reg_m").upper()
-        l_name = st.text_input("LAST NAME", key="reg_l").upper()
-        st.info("PASSWORD MUST BE 6-DIGIT NUMBER!")
-        new_pin = st.text_input("CREATE 6-DIGIT PASSCODE", type="password", max_chars=6, key="reg_pin")
-        st.info("ONLY ACTIVE INVESTOR IS ALLOWED AS INVITOR. IF NONE, TYPE 'DIRECT'")
-        inv_input = st.text_input("INVITOR FULL NAME", key="reg_inv").upper()
+        f_name = st.text_input("FIRST NAME", key="reg_f").upper().strip()
+        m_name = st.text_input("MIDDLE NAME", key="reg_m").upper().strip()
+        l_name = st.text_input("LAST NAME", key="reg_l").upper().strip()
+        
+        # Double Confirmation for Passcode
+        st.info("CREATE YOUR 6-DIGIT PASSCODE")
+        pass1 = st.text_input("ENTER 6-DIGIT PASSCODE", type="password", max_chars=6, key="p1")
+        pass2 = st.text_input("CONFIRM 6-DIGIT PASSCODE", type="password", max_chars=6, key="p2")
+        
+        st.info("INVITOR: TYPE FULL NAME OR 'DIRECT'")
+        inv_input = st.text_input("INVITOR FULL NAME", key="reg_inv").upper().strip()
 
+        # Validation Logic
         reg = load_registry()
-        is_valid = False
-        if inv_input == "DIRECT": is_valid = True
-        elif inv_input.strip() != "" and (inv_input in reg or inv_input.replace(" ", "_") in reg):
-            check_name = inv_input if inv_input in reg else inv_input.replace(" ", "_")
-            if len(reg[check_name].get('inv', [])) > 0: is_valid = True
+        is_valid_inv = False
+        if inv_input == "DIRECT": 
+            is_valid_inv = True
+        elif inv_input != "":
+            inv_alt = inv_input.replace(" ", "_")
+            if inv_input in reg or inv_alt in reg:
+                inv_key = inv_input if inv_input in reg else inv_alt
+                if len(reg[inv_key].get('inv', [])) > 0:
+                    is_valid_inv = True
 
-        if is_valid and len(new_pin) == 6 and f_name and l_name:
-            if st.button("PROCEED TO ACCOUNT CREATION", use_container_width=True):
-                db_username = f"{f_name}_{m_name}_{l_name}"
-                update_user(db_username, {"pin": new_pin, "wallet": 0.0, "inv": [], "full_name": f"{f_name} {m_name} {l_name}", "referred_by": inv_input})
-                st.success("Account Created!")
+        # Check if passwords match before showing the button
+        if pass1 != pass2 and len(pass2) == 6:
+            st.error("❌ PASSCODES DO NOT MATCH!")
+        
+        # PROCEED only if all conditions met + Passwords Match
+        if is_valid_inv and len(pass1) == 6 and pass1 == pass2 and f_name and l_name:
+            st.success("✅ Information Verified. You may now create your account.")
+            if st.button("PROCEED TO ACCOUNT CREATION", key="reg_btn_final", use_container_width=True):
+                db_key = f"{f_name}_{m_name}_{l_name}"
+                update_user(db_key, {
+                    "pin": pass1, 
+                    "wallet": 0.0, 
+                    "inv": [], 
+                    "full_name": f"{f_name} {m_name} {l_name}", 
+                    "referred_by": inv_input
+                })
+                st.success("Registration Successful!")
                 st.session_state.sub_page = "login_form"
+        
 
 # ==========================================
 # BLOCK 5: THE USER DASHBOARD (LIVE VERSION)
