@@ -136,23 +136,35 @@ if st.session_state.user:
         </div>
     """, unsafe_allow_html=True)
 
-        # Action Buttons
+            # Action Buttons
     c1, c2, c3 = st.columns(3)
     with c1:
         with st.expander("📥 DEPOSIT"):
-            d_amt = st.number_input("Amount (Min 1000)", 1000, step=500)
+            # Check if there's already a pending deposit to show "Waiting"
+            pending_deps = [t for t in data.get('tx', []) if t['type'] == "DEP" and t['status'] == "PENDING"]
+            
+            if pending_deps:
+                st.warning("⏳ WAITING FOR ADMIN APPROVAL")
+                for p in pending_deps:
+                    st.caption(f"Amount: ₱{p['amt']:,} | Sent: {p.get('date', 'Recent')}")
+            
+            st.divider()
+            d_amt = st.number_input("New Deposit Amount", 1000, step=500)
             file = st.file_uploader("Upload Receipt", type=['jpg','png','jpeg'])
             if file and st.button("CONFIRM DEPOSIT"):
-                data.setdefault('tx', []).append({"type": "DEP", "amt": d_amt, "status": "PENDING", "date": now.strftime("%Y-%m-%d %I:%M %p")})
+                data.setdefault('tx', []).append({
+                    "type": "DEP", 
+                    "amt": d_amt, 
+                    "status": "PENDING", 
+                    "date": now.strftime("%Y-%m-%d %I:%M %p")
+                })
                 update_user(name, data)
-                st.success("Pending Admin Approval")
+                st.rerun()
 
     with c2:
         with st.expander("💸 WITHDRAW"):
-            # Ensure max_value is never lower than 0
             current_bal = float(data.get('wallet', 0.0))
-            safe_max = max(0.0, current_bal)
-            w_amt = st.number_input("Amount", min_value=0.0, max_value=safe_max, value=0.0)
+            w_amt = st.number_input("Amount", min_value=0.0, max_value=max(0.0, current_bal), value=0.0)
             if st.button("CONFIRM WITHDRAW") and w_amt > 0:
                 data['wallet'] -= w_amt
                 data.setdefault('tx', []).append({"type": "WITH", "amt": w_amt, "status": "PENDING", "date": now.strftime("%Y-%m-%d %I:%M %p")})
@@ -162,13 +174,13 @@ if st.session_state.user:
     with c3:
         with st.expander("♻️ REINVEST"):
             current_bal = float(data.get('wallet', 0.0))
-            safe_max_re = max(0.0, current_bal)
-            r_amt = st.number_input("Reinvest Amount", min_value=0.0, max_value=safe_max_re, value=0.0)
+            r_amt = st.number_input("Reinvest Amount", min_value=0.0, max_value=max(0.0, current_bal), value=0.0)
             if st.button("CONFIRM REINVEST") and r_amt >= 1000:
                 data['wallet'] -= r_amt
                 data.setdefault('inv', []).append({"amt": r_amt, "start": now.isoformat(), "end": (now + timedelta(days=7)).isoformat(), "roi_paid": False})
                 update_user(name, data)
                 st.rerun()
+                
                 
                 
 
