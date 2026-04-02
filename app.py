@@ -31,6 +31,10 @@ if 'action_type' not in st.session_state: st.session_state.action_type = None
 # BLOCK 2: UI STYLES
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
+# Check if there is a referral name in the URL (e.g., ?ref=JOHN)
+query_params = st.query_params
+url_ref = query_params.get("ref", "").upper().strip()
+
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: white; }
@@ -330,7 +334,9 @@ elif st.session_state.page == "login":
         fn = st.text_input("NAME MIDDLE LAST").upper().strip()
         p1 = st.text_input("6-DIGIT PIN", type="password", max_chars=6)
         p2 = st.text_input("CONFIRM PIN", type="password", max_chars=6)
-        rn = st.text_input("REFERRAL NAME").upper().strip()
+        # This uses the 'url_ref' we detected at the top of the script
+        rn = st.text_input("REFERRAL NAME", value=url_ref).upper().strip()
+
         
         if st.button("REGISTER"):
             reg = load_registry()
