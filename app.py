@@ -100,32 +100,50 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# BLOCK 3: SESSION & AUTH
+# BLOCK 3: SECRET AUTH & STEALTH ADMIN
 # ==========================================
 if 'user' not in st.session_state: st.session_state.user = None
 if 'is_boss' not in st.session_state: st.session_state.is_boss = False
 
 if st.session_state.user is None and not st.session_state.is_boss:
-    # --- Login Screen with New Banner ---
+    # --- The Stealth Banner ---
     st.markdown("""
         <div class="rainbow-banner">
             <p class="main-title">INTERNATIONAL STOCK MARKET EXCHANGE</p>
         </div>
     """, unsafe_allow_html=True)
     
+    # The Advertisement
+    st.markdown("""
+        <div class="ad-panel">
+            <p class="ad-title">HOW WE GENERATE YOUR PROFIT:</p>
+            <p class="ad-text">
+                Your single capital is cycled multiple times every hour using our high-frequency 
+                scalping algorithm to ensure steady, ticking growth.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Standard User Login
     ln = st.text_input("Username")
     lp = st.text_input("PIN", type="password")
-    if st.button("ENTER DASHBOARD"):
-        reg = load_registry()
-        if ln in reg and str(reg[ln].get('pin')) == str(lp):
-            st.session_state.user = ln
-            st.rerun()
-        elif ln == "ADMIN" and lp == "BOSS":
+    
+    col_a, col_b = st.columns([0.9, 0.1])
+    with col_a:
+        if st.button("ENTER DASHBOARD"):
+            reg = load_registry()
+            if ln in reg and str(reg[ln].get('pin')) == str(lp):
+                st.session_state.user = ln
+                st.rerun()
+            else:
+                st.error("Invalid Username or PIN")
+    
+    with col_b:
+        # THE SECRET BUTTON: Just the emoji, no text.
+        if st.button("⛔"):
             st.session_state.is_boss = True
             st.rerun()
-        else:
-            st.error("Invalid Login")
-
+            
 # ==========================================
 # BLOCK 4: INVESTOR DASHBOARD
 # ==========================================
