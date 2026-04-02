@@ -90,82 +90,84 @@ if st.session_state.page == "ad" and not st.session_state.user and not st.sessio
 elif st.session_state.page == "login" and not st.session_state.user:
     st.markdown("<h1 style='text-align:center; color:#00eeff;'>ACCESS PORTAL</h1>", unsafe_allow_html=True)
     
+    # 1. INITIAL VIEW: ONLY TWO BUTTONS SHOW FIRST
     col_nav1, col_nav2 = st.columns(2)
-    if 'sub_page' not in st.session_state: st.session_state.sub_page = "select"
+    
+    # Initialize sub_page state to keep inputs hidden initially
+    if 'sub_page' not in st.session_state: 
+        st.session_state.sub_page = "select"
 
     with col_nav1:
-        if st.button("MEMBER LOG IN", use_container_width=True, key="btn_log"):
+        if st.button("MEMBER LOG IN", use_container_width=True, key="nav_login"):
             st.session_state.sub_page = "login_form"
     with col_nav2:
-        if st.button("REGISTER AS MEMBER", use_container_width=True, key="btn_reg"):
+        if st.button("REGISTER AS MEMBER", use_container_width=True, key="nav_reg"):
             st.session_state.sub_page = "reg_form"
 
     st.markdown("---")
 
+    # 2. MEMBER LOG IN SECTION (Appears only after clicking button)
     if st.session_state.sub_page == "login_form":
-        u_name = st.text_input("Username", key="l_u")
-        u_pin = st.text_input("6-Digit PIN", type="password", key="l_p")
+        st.info("USER NAME: INPUT YOUR 1ST NAME, MIDDLE NAME, AND LAST NAME")
+        u_name = st.text_input("FULL USERNAME (ALL CAPS)", key="l_u").upper()
+        
+        st.info("PASSWORD: INPUT YOUR 6-DIGIT NUMBERS ONLY")
+        u_pin = st.text_input("6-DIGIT PIN", type="password", max_chars=6, key="l_p")
+        
         if st.button("ENTER DASHBOARD", key="exec_l"):
             reg = load_registry()
-            if u_name in reg and str(reg[u_name].get('pin')) == str(u_pin):
-                st.session_state.user = u_name
+            # Remove spaces from input for matching if needed
+            formatted_u = u_name.replace(" ", "_")
+            if formatted_u in reg and str(reg[formatted_u].get('pin')) == str(u_pin):
+                st.session_state.user = formatted_u
                 st.rerun()
-            else: st.error("Invalid Credentials")
+            else:
+                st.error("Invalid Username or 6-Digit PIN")
 
+    # 3. REGISTER AS MEMBER SECTION (Appears only after clicking button)
     elif st.session_state.sub_page == "reg_form":
         st.warning("PLEASE USE CAPSLOCK FOR ALL NAME FIELDS")
         f_name = st.text_input("FIRST NAME", key="reg_f").upper()
         m_name = st.text_input("MIDDLE NAME", key="reg_m").upper()
         l_name = st.text_input("LAST NAME", key="reg_l").upper()
         
-        # 6-Digit PIN Requirement
+        # PIN Constraint
+        st.info("PASSWORD MUST BE 6-DIGIT NUMBER!")
         new_pin = st.text_input("CREATE 6-DIGIT PASSCODE", type="password", max_chars=6, key="reg_pin")
         
+        # Invitor Section
         st.info("ONLY ACTIVE INVESTOR IS ALLOWED AS INVITOR. IF NONE, TYPE 'DIRECT'")
         inv_input = st.text_input("INVITOR FULL NAME", key="reg_inv").upper()
 
-        # --- STRICT MANUAL INVITOR LOGIC ---
+        # Validation Logic
         reg = load_registry()
         is_valid = False
-        final_invitor = ""
-
-        # Check if the user manually typed "DIRECT"
         if inv_input == "DIRECT":
             is_valid = True
-            final_invitor = "DIRECT"
-            st.success("Proceeding as Direct Member.")
-        
-        # Check if they typed a specific name
-        elif inv_input.strip() != "":
-            if inv_input in reg:
-                # Check for active investment in their history
-                if len(reg[inv_input].get('inv', [])) > 0:
-                    is_valid = True
-                    final_invitor = inv_input
-                    st.success(f"Verified: {inv_input} is an Active Investor.")
-                else:
-                    st.error("This person is not an active investor.")
-            else:
-                st.error("Invitor name not found in system.")
-        
-        # PROCEED button only appears if is_valid is True
+        elif inv_input.strip() != "" and inv_input in reg:
+            if len(reg[inv_input].get('inv', [])) > 0:
+                is_valid = True
+
         if is_valid and len(new_pin) == 6 and f_name and l_name:
             if st.button("PROCEED TO ACCOUNT CREATION", key="reg_final", use_container_width=True):
-                username = f"{f_name}_{l_name}"
+                username = f"{f_name}_{m_name}_{l_name}"
                 new_data = {
                     "pin": new_pin,
                     "wallet": 0.0,
                     "inv": [],
                     "full_name": f"{f_name} {m_name} {l_name}",
-                    "referred_by": final_invitor
+                    "referred_by": inv_input
                 }
                 update_user(username, new_data)
-                st.success(f"Account Created! Welcome to ISMEX.")
+                st.success("Account Created! You can now Log In.")
                 st.session_state.sub_page = "login_form"
 
-    if st.button("← BACK TO ADVERTISEMENT"):
+    # Back button to return to Advertisement
+    if st.button("← BACK TO ADVERTISEMENT", key="back_to_ad"):
         st.session_state.page = "ad"
+        st.session_state.sub_page = "select"
         st.rerun()
+        
         
 
 # ==========================================
