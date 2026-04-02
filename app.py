@@ -307,7 +307,7 @@ elif st.session_state.page == "login":
             reg = load_registry()
             if u in reg and str(reg[u]['pin']) == str(p): st.session_state.user = u; st.rerun()
             else: st.error("Invalid Login")
-        with t2:
+        with t2:.
         fn = st.text_input("NAME MIDDLE LAST").upper().strip()
         p1 = st.text_input("6-DIGIT PIN", type="password", max_chars=6)
         p2 = st.text_input("CONFIRM PIN", type="password", max_chars=6)
