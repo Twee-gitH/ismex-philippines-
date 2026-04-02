@@ -170,19 +170,23 @@ elif st.session_state.user:
                 <div class='hist-card' style='border-left-color:#00ff88;'>
                     <b>CAPITAL AMOUNT</b>: ₱{a['amount']:,.2f}<br>
                     <small><b>Start:</b> {start_dt.strftime('%Y-%m-%d %H:%M')}</small><br>
-                    <small><b>Maturity:</b> {end_dt.strftime('%Y-%m-%d %H:%M')} <b>until</b> {grace_end.strftime('%Y-%m-%d %H:%M')}</small>
+                    <small><b>Claim Window:</b> {end_dt.strftime('%Y-%m-%d %H:%M')} TO {grace_end.strftime('%Y-%m-%d %H:%M')}</small>
                 </div>
             """, unsafe_allow_html=True)
 
-            # PULL OUT BUTTON: Visible only during the 1-hour window
-            if end_dt <= now <= grace_end:
-                st.success("Capital is available to pull out!")
-                if st.button(f"📥 PULL OUT ₱{a['amount']*1.20:,.2f}", key=f"pull_{idx}"):
-                    data['wallet'] += (a['amount'] * 1.20)
-                    needs_update = True
-                    update_user(st.session_state.user, data); st.balloons(); st.rerun()
-            elif now < end_dt:
+            # PULL OUT BUTTON: Always visible, only clickable during the 1-hour window
+            is_available = end_dt <= now <= grace_end
+            btn_label = f"📥 PULL OUT ₱{a['amount']*1.20:,.2f}"
+            
+            if st.button(btn_label, key=f"pull_{idx}", disabled=not is_available):
+                data['wallet'] += (a['amount'] * 1.20)
+                needs_update = True
+                update_user(st.session_state.user, data); st.balloons(); st.rerun()
+            
+            if not is_available and now < end_dt:
                 st.write(f"⏳ Matures in: {str(end_dt - now).split('.')[0]}")
+            elif is_available:
+                st.success("Investment Ready! Claim before it recycles.")
             
             updated_invs.append(a)
         if needs_update:
@@ -229,4 +233,4 @@ else:
     if st.session_state.admin_mode:
         if st.text_input("Code", type="password") == "0102030405":
             st.session_state.is_boss = True; st.rerun()
-                
+        
