@@ -156,29 +156,45 @@ elif st.session_state.user:
                     })
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
 
+        # --- 1st DISPLAY: RUNNING CAPITALS (NEWEST ON TOP) ---
     st.markdown("### 🚀 RUNNING CAPITALS")
     active = data.get('inv', [])
-    if not active: st.info("No running capitals.")
+    if not active:
+        st.info("No running capitals.")
     else:
         now = datetime.now()
-        for idx, a in enumerate(active):
+        # reversed() ensures the latest added capital is displayed first
+        for idx, a in reversed(list(enumerate(active))):
             start_dt = datetime.fromisoformat(a['start_time'])
             end_dt = start_dt + timedelta(days=7)
             total_roi = a['amount'] * 1.20
             days_elapsed = min(7.0, (now - start_dt).total_seconds() / 86400)
             live_profit = (a['amount'] * 0.20) * (max(0, days_elapsed) / 7)
+            
             st.markdown(f"""
                 <div class='hist-card'>
-                    <div style="display:flex; justify-content:space-between;"><b>CAPITAL: ₱{a['amount']:,.2f}</b><b style="color:#00ff88;">ROI: ₱{total_roi:,.2f}</b></div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <b>CAPITAL: ₱{a['amount']:,.2f}</b>
+                        <b style="color:#00ff88;">ROI: ₱{total_roi:,.2f}</b>
+                    </div>
                     <small>LIVE PROFIT: ₱{live_profit:,.2f}</small><br>
                     <small>START: {start_dt.strftime('%Y-%m-%d %I:%M %p')} | END: {end_dt.strftime('%Y-%m-%d %I:%M %p')}</small>
                 </div>
             """, unsafe_allow_html=True)
+            
             if now >= end_dt:
                 if st.button(f"📥 PULL OUT ₱{total_roi:,.2f}", key=f"p_{idx}"):
                     data['wallet'] += total_roi
-                    data.setdefault('history', []).append({"type": "PULL_OUT", "amount": total_roi, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "CONFIRMED"})
-                    active.pop(idx); update_user(st.session_state.user, data); st.rerun()
+                    data.setdefault('history', []).append({
+                        "type": "PULL_OUT", 
+                        "amount": total_roi, 
+                        "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 
+                        "status": "CONFIRMED"
+                    })
+                    active.pop(idx)
+                    update_user(st.session_state.user, data)
+                    st.rerun()
+                    
 
     st.markdown("### 🤝 REFERRAL COMMISSIONS (20%)")
     for c_idx, c in enumerate(data.get('commissions', [])):
