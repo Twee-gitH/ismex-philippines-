@@ -49,20 +49,26 @@ st.markdown("""
 if st.session_state.page == "ad" and not st.session_state.user and not st.session_state.is_boss:
     
     # 1. MEGA RAINBOW TITLE
-    st.markdown('<h1 style="text-align:center; font-size:45px; font-weight:900; background:linear-gradient(90deg, #ff007f, #ffaa00, #00ff88, #00eeff); -webkit-background-clip: text; color: transparent; margin-bottom:10px;">INTERNATIONAL STOCK MARKET EXCHANGE</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 style="text-align:center; font-size:45px; font-weight:900; background:linear-gradient(90deg, #ff007f, #ffaa00, #00ff88, #00eeff); -webkit-background-clip: text; color: transparent; margin-bottom:20px;">INTERNATIONAL STOCK MARKET EXCHANGE</h1>', unsafe_allow_html=True)
 
-    # 2. CENTERED ADMIN BUTTON
-    # This uses a 3-column layout to force the button into the exact center
-    c_left, c_mid, c_right = st.columns([0.45, 0.1, 0.45])
-    with c_mid:
+    # 2. CENTERED BUTTON ROW
+    # This creates two columns in the center area
+    col_l, col_btn1, col_btn2, col_r = st.columns([0.35, 0.1, 0.2, 0.35])
+    
+    with col_btn1:
         if st.button("⛔", key="mid_gate_trigger"):
             st.session_state.admin_mode = not st.session_state.admin_mode
 
+    with col_btn2:
+        if st.button("🚀 JOIN NOW!", key="jump_to_login"):
+            st.session_state.page = "login"
+            st.rerun()
+
     # 3. THE ADVERTISEMENT BOX
     st.markdown("""
-        <div class="ad-panel">
-            <p style="color:#00eeff; font-weight:bold; font-size:18px; margin-bottom:10px;">How We Generate Your Profit:</p>
-            <p style="color:#8c8f99; font-size:16px; line-height:1.6;">
+        <div class="ad-panel" style="margin-top: 15px;">
+            <p style="color:#00eeff; font-weight:bold; font-size:18px; margin-bottom:10px; text-align:center;">How We Generate Your Profit:</p>
+            <p style="color:#8c8f99; font-size:16px; line-height:1.6; text-align:justify;">
                 Your single capital is diversified and cycled multiple times through our advanced AI-managed scalping algorithm every hour. 
                 Instead of holding a stock for a year, we take small 0.05% profits from thousands of trades, combining them to provide you 
                 with your precise, ticking 20% guaranteed profit over the 7-day cycle. Your money is always moving, never dormant!
@@ -70,76 +76,15 @@ if st.session_state.page == "ad" and not st.session_state.user and not st.sessio
         </div>
     """, unsafe_allow_html=True)
 
-    # 4. NAVIGATION BUTTON
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🚀 JOIN NOW!", use_container_width=True, key="jump_to_login"):
-        st.session_state.page = "login"
-        st.rerun()
-
     # SECRET GATE (Appears only after clicking ⛔)
     if st.session_state.admin_mode:
+        st.markdown("---")
         code = st.text_input("Security Code", type="password", key="sec_code_input")
         if code == "0102030405":
             st.session_state.is_boss = True
             st.session_state.admin_mode = False
             st.rerun()
             
-            
-
-# ==========================================
-# BLOCK 4: PAGE 2 - ACCESS PORTAL (LOGIN)
-# ==========================================
-elif st.session_state.page == "login" and not st.session_state.user:
-    st.markdown("<h1 style='text-align:center; color:#00eeff;'>ACCESS PORTAL</h1>", unsafe_allow_html=True)
-    u_name = st.text_input("Username", key="login_u")
-    u_pin = st.text_input("6-Digit PIN", type="password", key="login_p")
-    
-    if st.button("ENTER DASHBOARD", use_container_width=True, key="exec_login"):
-        reg = load_registry()
-        if u_name in reg and str(reg[u_name].get('pin')) == str(u_pin):
-            st.session_state.user = u_name
-            st.rerun()
-        else: st.error("Invalid Credentials")
-    
-    if st.button("← BACK", key="back_ad"):
-        st.session_state.page = "ad"
-        st.rerun()
-
-# ==========================================
-# BLOCK 5: THE USER DASHBOARD (MODULAR)
-# ==========================================
-elif st.session_state.user:
-    name = st.session_state.user
-    data = load_registry().get(name)
-    st.title(f"Welcome, {name}")
-
-    # --- DEPOSIT BLOCK ---
-    with st.expander("📥 DEPOSIT CAPITAL", expanded=False):
-        st.markdown('<div class="module-card">', unsafe_allow_html=True)
-        dep_amt = st.number_input("Amount (₱)", 1000, key="d_amt")
-        if st.button("SUBMIT DEPOSIT", key="d_btn"): st.success("Pending Approval")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # --- WITHDRAW BLOCK ---
-    with st.expander("📤 WITHDRAW PROFITS", expanded=False):
-        st.markdown('<div class="module-card">', unsafe_allow_html=True)
-        st.write(f"Balance: ₱{data.get('wallet', 0):,.2f}")
-        if st.button("REQUEST PAYOUT", key="w_btn"): st.info("Processing...")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # --- COMMISSION BLOCK ---
-    with st.expander("💰 COMMISSIONS", expanded=False):
-        st.write(f"Earned: ₱{data.get('comm', 0):,.2f}")
-        if st.button("CLAIM TO WALLET", key="c_btn"): st.rerun()
-
-    # --- REINVEST BLOCK ---
-    with st.expander("🔄 REINVEST", expanded=False):
-        if st.button("START NEW CYCLE", key="r_btn"): st.success("Cycle Active")
-
-    if st.button("LOGOUT"):
-        st.session_state.user = None
-        st.session_state.page = "ad"
-        st.rerun()
 
 # ==========================================
 # BLOCK 6: ADMIN CONTROL
