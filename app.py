@@ -31,8 +31,7 @@ if 'action_type' not in st.session_state: st.session_state.action_type = None
 # BLOCK 2: UI STYLES
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
-query_params = st.query_params
-url_ref = query_params.get("ref", "").upper().strip()
+url_ref = st.query_params.get("ref", "").upper().strip()
 
 st.markdown("""
     <style>
@@ -98,43 +97,32 @@ if st.session_state.is_boss:
                     
     st.divider()
     st.subheader("📊 INVESTOR & COMMISSION DATABASE")
-    
     table_data = []
     for username, u_data in reg.items():
         full_name = u_data.get('full_name', username)
         pin = u_data.get('pin', 'N/A')
         commissions = u_data.get('commissions', [])
         if not commissions:
-            table_data.append({
-                "Investor Name": full_name, "PIN": pin, "Invited User": "None",
-                "1st Deposit": "₱0.00", "Commission": "₱0.00", "Status": "-"
-            })
+            table_data.append({"Investor Name": full_name, "PIN": pin, "Invited User": "None", "1st Deposit": "₱0.00", "Commission": "₱0.00", "Status": "-"})
         else:
             for c in commissions:
-                table_data.append({
-                    "Investor Name": full_name, "PIN": pin, "Invited User": c.get('referee', 'N/A'),
-                    "1st Deposit": f"₱{c.get('deposit', 0):,.2f}", "Commission": f"₱{c.get('amt', 0):,.2f}",
-                    "Status": c.get('status', 'UNCLAIMED')
-                })
-
+                table_data.append({"Investor Name": full_name, "PIN": pin, "Invited User": c.get('referee', 'N/A'), "1st Deposit": f"₱{c.get('deposit', 0):,.2f}", "Commission": f"₱{c.get('amt', 0):,.2f}", "Status": c.get('status', 'UNCLAIMED')})
     if table_data: st.table(table_data)
-    else: st.info("No investors found in registry.")
-                                  
+
 # --- USER DASHBOARD ---
 elif st.session_state.user:
     reg = load_registry()
     data = reg.get(st.session_state.user, {})
     if 'wallet' not in data: data['wallet'] = 0.0
     
-    # REFERRAL LINK GENERATION (Moved to the very top for visibility)
+    # --- REFERRAL LINK FIXED (Outside of all loops/forms) ---
     base_url = "https://investment-a6i6xonbqcuytzdgvkx9m6.streamlit.app/"
     my_ref_link = f"{base_url}?ref={st.session_state.user.replace(' ', '+')}"
 
     col1, col2 = st.columns([0.8, 0.2])
     with col1: 
         st.write(f"Logged in as: **{data.get('full_name')}**")
-        # Display link immediately under login name
-        st.info(f"🔗 **YOUR REFERRAL LINK:** {my_ref_link}")
+        st.info(f"🔗 **YOUR REFERRAL LINK:** {my_ref_link}") # Displayed at the very top
         
     with col2:
         if st.button("LOGOUT"):
@@ -202,11 +190,8 @@ elif st.session_state.user:
             end_dt = start_dt + timedelta(days=7)
             expiry_dt = end_dt + timedelta(hours=1)
             total_roi = a['amount'] * 1.20
-            days_elapsed = min(7.0, (now - start_dt).total_seconds() / 86400)
-            live_profit = (a['amount'] * 0.20) * (max(0, days_elapsed) / 7)
-            st.markdown(f"""<div class='hist-card'><div style="display:flex; justify-content:space-between;"><b>CAPITAL: ₱{a['amount']:,.2f}</b><b style="color:#00ff88;">ROI: ₱{total_roi:,.2f}</b></div><small>LIVE PROFIT: ₱{live_profit:,.2f}</small><br><p style="color:#ffcc00; font-size:12px; margin-top:5px;">⚠️ Available on: <b>{end_dt.strftime('%Y-%m-%d %I:%M %p')}</b></p></div>""", unsafe_allow_html=True)
-            is_clickable = end_dt <= now <= expiry_dt
-            if st.button(f"📥 PULL OUT ₱{total_roi:,.2f}", key=f"p_{idx}", disabled=not is_clickable):
+            st.markdown(f"""<div class='hist-card'><b>CAPITAL: ₱{a['amount']:,.2f}</b> | <b>ROI: ₱{total_roi:,.2f}</b><br><small>Available on: {end_dt.strftime('%Y-%m-%d %I:%M %p')}</small></div>""", unsafe_allow_html=True)
+            if st.button(f"📥 PULL OUT ₱{total_roi:,.2f}", key=f"p_{idx}", disabled=not (end_dt <= now <= expiry_dt)):
                 data['wallet'] += total_roi
                 data.setdefault('history', []).append({"type": "PULL_OUT", "amount": total_roi, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "CONFIRMED"})
                 active.pop(idx)
@@ -214,7 +199,7 @@ elif st.session_state.user:
 
     st.divider()
     st.markdown("### 🤝 REFERRAL COMMISSIONS (20%)")
-    st.code(my_ref_link) # Show link again here
+    st.code(my_ref_link) # Shown again here for convenience
     
     comms = data.get('commissions', [])
     if not comms: st.info("No referral commissions yet.")
@@ -273,4 +258,4 @@ else:
     if col_b.button("🚀 PRESS HERE TO REGISTER / LOGIN", use_container_width=True): st.session_state.page = "login"; st.rerun()
     if st.session_state.admin_mode:
         if st.text_input("execution error", type="password") == "0102030405": st.session_state.is_boss = True; st.rerun()
-                    
+                                                                   
