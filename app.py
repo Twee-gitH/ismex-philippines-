@@ -63,7 +63,7 @@ if st.session_state.is_boss:
                 ca, cr = st.columns(2)
                 if ca.button("✅ APPROVE", key=f"app_{username}_{idx}"):
                     if action['type'] == "DEPOSIT":
-                        # Referral Commission (20% on First Deposit Only)
+                        # 20% Commission for Referrer on First Deposit
                         if not u_data.get('has_deposited'):
                             ref_name = u_data.get('referral')
                             if ref_name in reg:
@@ -113,7 +113,7 @@ elif st.session_state.user:
     if c2.button("💸 WITHDRAW"): st.session_state.action_type = "WITH"
     if c3.button("♻️ REINVEST"): st.session_state.action_type = "REIN"
 
-    # --- ACTION FORMS ---
+    # --- FORMS ---
     if st.session_state.action_type == "DEP":
         with st.form("d"):
             st.markdown("### 📥 DEPOSIT REQUEST")
@@ -126,19 +126,19 @@ elif st.session_state.user:
                         "type": "DEPOSIT", "amount": amt_d, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "WAITING CONFIRMATION"
                     })
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
-                else: st.error("Upload receipt first!")
+                else: st.error("Please upload receipt.")
 
     elif st.session_state.action_type == "WITH":
         with st.form("w"):
             st.markdown("### 💸 WITHDRAWAL REQUEST")
             st.warning("⚠️ MINIMUM WITHDRAWAL IS ₱1,000.00")
-            amt_w = st.number_input("Amount", min_value=0.0, max_value=max(0.0, data['wallet']))
-            b_name = st.text_input("BANK NAME").upper()
-            a_name = st.text_input("ACCOUNT NAME").upper()
-            a_num = st.text_input("ACCOUNT NUMBER")
+            amt_w = st.number_input("Amount", min_value=0.0, max_value=max(0.0, float(data['wallet'])))
+            b_name = st.text_input("BANK NAME").upper().strip()
+            a_name = st.text_input("ACCOUNT NAME").upper().strip()
+            a_num = st.text_input("ACCOUNT NUMBER").strip()
             if st.form_submit_button("SUBMIT TO ADMIN"):
-                if amt_w < 1000: st.error("Minimum is ₱1,000")
-                elif not b_name or not a_name or not a_num: st.error("Fill all details")
+                if amt_w < 1000: st.error("Minimum ₱1,000 required.")
+                elif not b_name or not a_name or not a_num: st.error("Fill all bank details.")
                 else:
                     data['wallet'] -= amt_w
                     data.setdefault('pending_actions', []).append({
@@ -150,8 +150,8 @@ elif st.session_state.user:
     elif st.session_state.action_type == "REIN":
         with st.form("r"):
             st.markdown("### ♻️ REINVEST CAPITAL")
-            amt_r = st.number_input("Amount to Reinvest", min_value=100.0, max_value=max(100.0, data['wallet']))
-            if st.form_submit_button("CONFIRM"):
+            amt_r = st.number_input("Amount to Reinvest", min_value=100.0, max_value=max(100.0, float(data['wallet'])))
+            if st.form_submit_button("CONFIRM REINVESTMENT"):
                 if amt_r > data['wallet']: st.error("Insufficient Balance")
                 else:
                     data['wallet'] -= amt_r
@@ -175,7 +175,7 @@ elif st.session_state.user:
             live_profit = (a['amount'] * 0.20) * (max(0, days_elapsed) / 7)
             st.markdown(f"""
                 <div class='hist-card'>
-                    <div style="display:flex; justify-content:space-between;"><b>CAPITAL: ₱{a['amount']:,.2f}</b><b style="color:#00ff88;">TOTAL ROI: ₱{total_roi:,.2f}</b></div>
+                    <div style="display:flex; justify-content:space-between;"><b>CAPITAL: ₱{a['amount']:,.2f}</b><b style="color:#00ff88;">ROI: ₱{total_roi:,.2f}</b></div>
                     <small>LIVE PROFIT: ₱{live_profit:,.2f}</small><br>
                     <small>START: {start_dt.strftime('%Y-%m-%d %I:%M %p')} | END: {end_dt.strftime('%Y-%m-%d %I:%M %p')}</small>
                 </div>
@@ -190,7 +190,7 @@ elif st.session_state.user:
     st.markdown("### 🤝 REFERRAL COMMISSIONS (20%)")
     for c_idx, c in enumerate(data.get('commissions', [])):
         col_ref, col_btn = st.columns([0.7, 0.3])
-        col_ref.write(f"👤 **{c['referee']}** | Bonus: **₱{c['amt']:,.2f}**")
+        col_ref.write(f"👤 **{c['referee']}** | Deposit: ₱{c['deposit']:,.2f} | Bonus: **₱{c['amt']:,.2f}**")
         if c['status'] == "UNCLAIMED":
             if col_btn.button(f"CLAIM ₱{c['amt']:,.2f}", key=f"ref_{c_idx}"):
                 data['wallet'] += c['amt']; c['status'] = "CLAIMED"
@@ -235,4 +235,4 @@ else:
     if st.button("⛔"): st.session_state.admin_mode = not st.session_state.admin_mode
     if st.session_state.admin_mode and st.text_input("Admin Key", type="password") == "0102030405":
         st.session_state.is_boss = True; st.rerun()
-            
+        
