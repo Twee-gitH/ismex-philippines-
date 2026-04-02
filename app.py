@@ -45,12 +45,16 @@ st.markdown("""
         margin-bottom: 10px;
     }
     
-    .main-title { 
-        font-weight: bold; font-size: 24px;
+        .main-title { 
+        font-weight: bold; 
+        font-size: 36px; /* Increased from 24px to 36px */
         background: linear-gradient(90deg, #ff007f, #ffaa00, #00ff88, #00eeff);
         -webkit-background-clip: text; color: transparent;
-        margin: 0;
+        margin-right: 5px;
+        white-space: nowrap;
+        line-height: 1.2;
     }
+    
     
     .ad-panel { 
         background: #1c1e26; border-radius: 8px; border: 1px dashed #00eeff; 
@@ -129,34 +133,7 @@ if st.session_state.user is None and not st.session_state.is_boss:
             st.error("Access Denied")
             
 
-    # --- THE FULL ADVERTISEMENT ---
-    st.markdown("""
-        <div class="ad-panel">
-            <p class="ad-title">How We Generate Your Profit:</p>
-            <p class="ad-text">
-                Your single capital is diversified and <b>cycled multiple times</b> through our advanced AI-managed scalping algorithm every hour. 
-                Instead of holding a stock for a year, we take small 0.05% profits from thousands of trades, combining them to provide you 
-                with your precise, ticking 20% guaranteed profit over the 7-day cycle. Your money is always moving, never dormant!
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # Admin Login Trigger
-    if st.session_state.admin_mode:
-        code = st.text_input("Security Code", type="password")
-        if code == "0102030405":
-            st.session_state.is_boss = True
-            st.session_state.admin_mode = False
-            st.rerun()
-
-    u_name = st.text_input("Username")
-    u_pin = st.text_input("PIN", type="password")
-    if st.button("ENTER DASHBOARD"):
-        reg = load_registry()
-        if u_name in reg and str(reg[u_name].get('pin')) == str(u_pin):
-            st.session_state.user = u_name
-            st.rerun()
-        else: st.error("Access Denied")
+    
 
 # ==========================================
 # BLOCK 4: USER DASHBOARD
