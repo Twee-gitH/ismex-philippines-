@@ -105,13 +105,14 @@ elif st.session_state.user:
         </div>
     """, unsafe_allow_html=True)
 
-    c1, c2, c3 = st.columns(3)
+    
+        c1, c2, c3 = st.columns(3)
     if c1.button("📥 DEPOSIT"): st.session_state.action_type = "DEP"
     if c2.button("💸 WITHDRAW"): st.session_state.action_type = "WITH"
-        if c3.button("♻️ REINVEST"):
+    if c3.button("♻️ REINVEST"):
         if data['wallet'] > 0:
             amt = data['wallet']
-            data['wallet'] = 0
+            data['wallet'] = 0.0
             data.setdefault('inv', []).append({"amount": amt, "start_time": datetime.now().isoformat()})
             # Log the recycle action
             data.setdefault('history', []).append({
@@ -120,25 +121,23 @@ elif st.session_state.user:
                 "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "status": "RECYCLE RUNNING"
             })
-            update_user(st.session_state.user, data); st.rerun()
-            
-        # --- USER DASHBOARD DEPOSIT SECTION ---
+            update_user(st.session_state.user, data)
+            st.rerun()
+
+    # --- USER DASHBOARD DEPOSIT SECTION ---
     if st.session_state.action_type == "DEP":
         with st.form("d"):
             st.markdown("### 📥 DEPOSIT REQUEST")
             amt_d = st.number_input("Amount to Deposit", min_value=100.0)
-            
-            # THE RESTORED BROWSE RECEIPT FEATURE
             uploaded_file = st.file_uploader("Browse/Upload Deposit Receipt", type=['jpg', 'jpeg', 'png'])
             
             if st.form_submit_button("SEND TO ADMIN"):
                 if uploaded_file is not None:
-                    # Save the request to pending_actions
                     data.setdefault('pending_actions', []).append({
                         "type": "DEPOSIT", 
                         "amount": amt_d, 
-                        "date": str(datetime.now()),
-                        "status": "WAITING FOR APPROVAL"
+                        "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "status": "WAITING CONFIRMATION"
                     })
                     update_user(st.session_state.user, data)
                     st.success("Receipt sent! Waiting for Admin approval.")
@@ -146,6 +145,7 @@ elif st.session_state.user:
                     st.rerun()
                 else:
                     st.error("Please upload your receipt first!")
+                    
                     
 
     # --- RUNNING CAPITALS SECTION ---
