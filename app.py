@@ -98,9 +98,13 @@ if st.session_state.is_boss:
     st.write("Database Raw View:", reg)
 
 # --- ROUTE B: USER DASHBOARD ---
+# --- ROUTE B: USER DASHBOARD ---
 elif st.session_state.user:
     reg = load_registry()
     data = reg.get(st.session_state.user, {})
+    
+    # Ensure wallet exists to prevent errors
+    if 'wallet' not in data: data['wallet'] = 0.0
     
     # Maturity logic
     current_invs = data.get('inv', [])
@@ -146,13 +150,13 @@ elif st.session_state.user:
                 data.setdefault('pending_actions', []).append({"type": "DEPOSIT", "amount": amt_d, "date": str(datetime.now())})
                 update_user(st.session_state.user, data); st.success("Sent!"); st.session_state.action_type = None; st.rerun()
     
-    st.session_state.action_type == "WITH":
+    # FIXED: Added 'if' to fix SyntaxError and added balance check to prevent crashes
+    if st.session_state.action_type == "WITH":
         if data['wallet'] < 100:
             st.error("❌ Insufficient Balance. You need at least ₱100.00 to withdraw.")
             if st.button("Close"): st.session_state.action_type = None; st.rerun()
         else:
             with st.form("w"):
-                # We set max_value to the wallet balance, but ensure min is possible
                 amt_w = st.number_input("Amount", min_value=100.0, max_value=float(data['wallet']))
                 bn = st.text_input("Bank / Wallet Name")
                 an = st.text_input("Account Name")
@@ -168,7 +172,6 @@ elif st.session_state.user:
                     st.session_state.action_type = None
                     st.rerun()
 
-    # --- REINVEST BLOCK FIX ---
     if st.session_state.action_type == "REIN":
         if data['wallet'] < 100:
             st.error("❌ Insufficient Balance. You need at least ₱100.00 to reinvest.")
@@ -183,3 +186,4 @@ elif st.session_state.user:
                     st.success("Cycle Started!")
                     st.session_state.action_type = None
                     st.rerun()
+                    
