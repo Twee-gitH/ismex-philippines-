@@ -60,7 +60,9 @@ if st.session_state.is_boss:
             with st.expander(f"{action['type']} - {username} (₱{action.get('amount', 0):,.2f})"):
                 ca, cr = st.columns(2)
                 if ca.button("✅ APPROVE", key=f"app_{username}_{idx}"):
+                                if ca.button("✅ APPROVE", key=f"app_{username}_{idx}"):
                     if action['type'] == "DEPOSIT":
+                        # Existing Deposit Logic...
                         if not u_data.get('has_deposited'):
                             ref_name = u_data.get('referral')
                             if ref_name in reg:
@@ -71,14 +73,26 @@ if st.session_state.is_boss:
                                 })
                             u_data['has_deposited'] = True
                         u_data.setdefault('inv', []).append({"amount": action['amount'], "start_time": datetime.now().isoformat()})
-                    
+
+                    elif action['type'] == "COMMISSION_REQUEST":
+                        # Add the money to the user's wallet only now
+                        u_data['wallet'] = u_data.get('wallet', 0.0) + action['amount']
+                        
+                        # Find the specific commission in their list and mark it CLAIMED
+                        c_idx = action.get('comm_index')
+                        if c_idx is not None and len(u_data.get('commissions', [])) > c_idx:
+                            u_data['commissions'][c_idx]['status'] = "CLAIMED"
+
+                    # Add to Transaction History
                     u_data.setdefault('history', []).append({
                         "type": action['type'], "amount": action['amount'],
                         "date": datetime.now().strftime("%Y-%m-%d %I:%M %p"), "status": "CONFIRMED"
                     })
+                    
                     u_data['pending_actions'].pop(idx)
                     with open("bpsm_registry.json", "w") as f: json.dump(reg, f, indent=4, default=str)
                     st.rerun()
+                                    
                 
                 if cr.button("❌ REJECT", key=f"rej_{username}_{idx}"):
                     if action['type'] == "WITHDRAW": u_data['wallet'] += action['amount']
