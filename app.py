@@ -212,7 +212,7 @@ elif st.session_state.user:
     else:
         now = datetime.now()
         # reversed() ensures the latest added capital is displayed first
-            for idx, a in reversed(list(enumerate(active))):
+        for idx, a in reversed(list(enumerate(active))):
             start_dt = datetime.fromisoformat(a['start_time'])
             end_dt = start_dt + timedelta(days=7)
             # This is one hour after maturity as you requested
