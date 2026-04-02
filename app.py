@@ -61,7 +61,6 @@ if st.session_state.is_boss:
     for username, u_data in reg.items():
         pending_list = u_data.get('pending_actions', [])
         for idx, action in enumerate(list(pending_list)):
-            # Added User Name and PIN to the expander label
             with st.expander(f"{action['type']} - {username} (PIN: {u_data.get('pin')}) - ₱{action.get('amount', 0):,.2f}"):
                 ca, cr = st.columns(2)
                 if ca.button("✅ APPROVE", key=f"app_{username}_{idx}"):
@@ -101,17 +100,12 @@ if st.session_state.is_boss:
     st.divider()
     st.subheader("📊 INVESTOR & COMMISSION DATABASE")
     
-    # Prepare data for the table
     table_data = []
     for username, u_data in reg.items():
-        # Get basic info
         full_name = u_data.get('full_name', username)
         pin = u_data.get('pin', 'N/A')
-        
-        # Get commission details
         commissions = u_data.get('commissions', [])
         if not commissions:
-            # Add user even if they have no invites yet
             table_data.append({
                 "Investor Name": full_name,
                 "PIN": pin,
@@ -131,7 +125,6 @@ if st.session_state.is_boss:
                     "Status": c.get('status', 'UNCLAIMED')
                 })
 
-    # Display the Table
     if table_data:
         st.table(table_data)
     else:
@@ -144,28 +137,7 @@ elif st.session_state.user:
     if 'wallet' not in data: data['wallet'] = 0.0
     
     col1, col2 = st.columns([0.8, 0.2])
-    with     col1, col2 = st.columns([0.8, 0.2])
-    with col1: 
-        st.write(f"Logged in as: **{data.get('full_name')}**")
-        
-        # --- INSERTED REFERRAL LINK BLOCK ---
-        base_url = "https://investment-a6i6xonbqcuytzdgvkx9m6.streamlit.app/"
-        my_ref_link = f"{base_url}?ref={st.session_state.user.replace(' ', '+')}"
-        st.info(f"🔗 **YOUR REFERRAL LINK:**\n\n{my_ref_link}")
-        # ------------------------------------
-
-    with col2:
-        if st.button("LOGOUT"):
-            st.session_state.user = None; st.session_state.page = "ad"; st.rerun()
-            
-            # THIS MAKES THE LINK SHOW AT THE VERY TOP
-    base_url = "https://investment-a6i6xonbqcuytzdgvkx9m6.streamlit.app/"
-    my_ref_link = f"{base_url}?ref={st.session_state.user.replace(' ', '+')}"
-    
-    with st.expander("🔗 TAP HERE FOR YOUR REFERRAL LINK"):
-        st.code(my_ref_link)
-        st.caption("Share this link to auto-fill your name for new sign-ups.")
-        
+    with col1: st.write(f"Logged in as: **{data.get('full_name')}**")
     with col2:
         if st.button("LOGOUT"):
             st.session_state.user = None; st.session_state.page = "ad"; st.rerun()
@@ -229,18 +201,15 @@ elif st.session_state.user:
                     })
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
 
-        # --- 1st DISPLAY: RUNNING CAPITALS (NEWEST ON TOP) ---
     st.markdown("### 🚀 RUNNING CAPITALS")
     active = data.get('inv', [])
     if not active:
         st.info("No running capitals.")
     else:
         now = datetime.now()
-        # reversed() ensures the latest added capital is displayed first
         for idx, a in reversed(list(enumerate(active))):
             start_dt = datetime.fromisoformat(a['start_time'])
             end_dt = start_dt + timedelta(days=7)
-            # This is one hour after maturity as you requested
             expiry_dt = end_dt + timedelta(hours=1)
             
             total_roi = a['amount'] * 1.20
@@ -261,8 +230,6 @@ elif st.session_state.user:
                 </div>
             """, unsafe_allow_html=True)
             
-            # Button is now ALWAYS visible
-            # It is only CLICKABLE (enabled) during that 1-hour window
             is_clickable = end_dt <= now <= expiry_dt
             
             if st.button(f"📥 PULL OUT ₱{total_roi:,.2f}", key=f"p_{idx}", disabled=not is_clickable):
@@ -277,36 +244,23 @@ elif st.session_state.user:
                 update_user(st.session_state.user, data)
                 st.rerun()
                 
-                    
-
-        st.markdown("### 🤝 REFERRAL COMMISSIONS (20%)")
-            # Generate the link based on their logged-in name
-    # Replace 'your-app-name' with your actual Streamlit URL
-    base_url = "https://your-app-name.streamlit.app/"
+    # --- REFERRAL SECTION FIXED ---
+    st.markdown("### 🤝 REFERRAL COMMISSIONS (20%)")
+    base_url = "https://investment-a6i6xonbqcuytzdgvkx9m6.streamlit.app/"
     my_ref_link = f"{base_url}?ref={st.session_state.user.replace(' ', '+')}"
-    
     
     st.info("📢 **YOUR REFERRAL LINK:**")
     st.code(my_ref_link)
     st.caption("Share this link with your invites to automatically fill your name as their referral.")
     
     comms = data.get('commissions', [])
-    
     if not comms:
         st.info("No referral commissions yet.")
     else:
-        # Create a clean table for the user to see their invites
         user_table = []
         for idx, c in enumerate(comms):
             status = c.get('status', 'UNCLAIMED')
-            
-            # Action logic for the status column
-            if status == "UNCLAIMED":
-                display_status = "Ready to Request"
-            elif status == "REQUESTED":
-                display_status = "⏳ Pending Admin"
-            else:
-                display_status = "✅ Received"
+            display_status = "Ready to Request" if status == "UNCLAIMED" else ("⏳ Pending Admin" if status == "REQUESTED" else "✅ Received")
 
             user_table.append({
                 "Invite Name": c.get('referee'),
@@ -314,11 +268,8 @@ elif st.session_state.user:
                 "Bonus": f"₱{c.get('amt', 0):,.2f}",
                 "Status": display_status
             })
-        
-        # Show the table to the user
         st.table(user_table)
 
-        # Show Request Buttons only for UNCLAIMED ones
         for idx, c in enumerate(comms):
             if c.get('status') == "UNCLAIMED":
                 if st.button(f"Request Bonus from {c['referee']}", key=f"req_{idx}"):
@@ -333,7 +284,6 @@ elif st.session_state.user:
                     update_user(st.session_state.user, data)
                     st.rerun()
                     
-            
     st.markdown("### 📜 TRANSACTION HISTORY")
     for p in data.get('pending_actions', []):
         lbl = "WAITING CONFIRMATION" if p['type'] == "DEPOSIT" else "WITHDRAWAL REQUESTED"
@@ -361,24 +311,19 @@ elif st.session_state.page == "login":
                 st.error("Invalid Login")
                 
     with t2:
-        # Every line below 'with t2:' must be indented exactly like this
         fn = st.text_input("NAME MIDDLE LAST").upper().strip()
         p1 = st.text_input("6-DIGIT PIN", type="password", max_chars=6)
         p2 = st.text_input("CONFIRM PIN", type="password", max_chars=6)
-        # This uses the 'url_ref' we detected at the top of the script
         rn = st.text_input("REFERRAL NAME", value=url_ref).upper().strip()
-
         
         if st.button("REGISTER"):
             reg = load_registry()
-            # Check if fields are valid and Referral exists
             if not fn or len(p1) != 6 or p1 != p2:
                 st.error("Check fields and PIN match (6 digits).")
             elif rn not in reg:
                 st.error(f"Referral '{rn}' not found.")
             else:
                 referrer_data = reg[rn]
-                # New user cannot sign in without an active investor referral
                 if not referrer_data.get('inv') or len(referrer_data.get('inv')) == 0:
                     st.error(f"'{rn}' is not an active investor. Only active investors can refer.")
                 else:
@@ -391,9 +336,6 @@ elif st.session_state.page == "login":
                     update_user(fn, reg[fn])
                     st.success("Registration Successful! Please Login.")
                     
-                    
-                    
-# RESTORED ORIGINAL FRONT PAGE
 else:
     st.markdown("<h1 style='color: #007BFF; margin-bottom: 0;'>INTERNATIONAL STOCK MARKET EXCHANGE! 📊📈</h1>", unsafe_allow_html=True)
     st.markdown("### Transform your initial investment into a powerhouse of growth through our precision-engineered market cycles.")
@@ -405,4 +347,4 @@ else:
     if st.session_state.admin_mode:
         if st.text_input("execution error", type="password") == "0102030405":
             st.session_state.is_boss = True; st.rerun()
-                    
+            
