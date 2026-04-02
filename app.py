@@ -358,7 +358,7 @@ elif st.session_state.page == "login":
                     
 # RESTORED ORIGINAL FRONT PAGE
 else:
-    st.markdown("<h1 style='color: #0e1117; margin-bottom: 0;'>INTERNATIONAL STOCK MARKET EXCHANGE</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color: #007BFF; margin-bottom: 0;'>INTERNATIONAL STOCK MARKET EXCHANGE</h1>", unsafe_allow_html=True)
     st.markdown("### Transform your initial investment into a powerhouse of growth through our precision-engineered market cycles.")
     st.divider()
     st.info("### 🚀 Grow your capital by 20% every 7 days!")
