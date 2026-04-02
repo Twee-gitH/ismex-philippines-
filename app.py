@@ -264,6 +264,7 @@ elif st.session_state.user:
     base_url = "https://your-app-name.streamlit.app/"
     my_ref_link = f"{base_url}?ref={st.session_state.user.replace(' ', '+')}"
     
+    
     st.info("📢 **YOUR REFERRAL LINK:**")
     st.code(my_ref_link)
     st.caption("Share this link with your invites to automatically fill your name as their referral.")
