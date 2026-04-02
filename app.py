@@ -44,7 +44,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# BLOCK 3: PAGE ROUTING (ONE PAGE AT A TIME)
+# BLOCK 3: PAGE ROUTING
 # ==========================================
 
 # --- ROUTE A: ADMIN PANEL ---
@@ -56,7 +56,6 @@ if st.session_state.is_boss:
     
     reg = load_registry()
     
-    # 1. APPROVAL QUEUE
     st.subheader("🔔 PENDING APPROVALS")
     found_pending = False
     for username, u_data in reg.items():
@@ -87,7 +86,6 @@ if st.session_state.is_boss:
     if not found_pending: st.info("No pending requests.")
     st.divider()
     
-    # 2. MANUAL ADD (Your original admin tool)
     st.subheader("🛠️ MANUAL USER MANAGEMENT")
     target = st.selectbox("Select User", list(reg.keys()))
     amt = st.number_input("Capital Amount", min_value=100.0)
@@ -95,18 +93,13 @@ if st.session_state.is_boss:
         reg[target].setdefault('inv', []).append({"amount": amt, "start_time": datetime.now().isoformat()})
         update_user(target, reg[target])
         st.success("Cycle Started!")
-    st.write("Database Raw View:", reg)
 
-# --- ROUTE B: USER DASHBOARD ---
 # --- ROUTE B: USER DASHBOARD ---
 elif st.session_state.user:
     reg = load_registry()
     data = reg.get(st.session_state.user, {})
-    
-    # Ensure wallet exists to prevent errors
     if 'wallet' not in data: data['wallet'] = 0.0
     
-    # Maturity logic
     current_invs = data.get('inv', [])
     updated_invs = []
     payout = False
@@ -120,7 +113,6 @@ elif st.session_state.user:
         update_user(st.session_state.user, data)
         st.balloons()
 
-    # Dashboard UI
     col1, col2 = st.columns([0.8, 0.2])
     with col1: st.markdown(f"### BPSM\nWelcome, {data.get('full_name')}")
     with col2:
@@ -136,7 +128,6 @@ elif st.session_state.user:
         </div>
     """, unsafe_allow_html=True)
 
-    # Actions
     c1, c2, c3 = st.columns(3)
     if c1.button("📥 DEPOSIT"): st.session_state.action_type = "DEP"
     if c2.button("💸 WITHDRAW"): st.session_state.action_type = "WITH"
@@ -150,31 +141,24 @@ elif st.session_state.user:
                 data.setdefault('pending_actions', []).append({"type": "DEPOSIT", "amount": amt_d, "date": str(datetime.now())})
                 update_user(st.session_state.user, data); st.success("Sent!"); st.session_state.action_type = None; st.rerun()
     
-    # FIXED: Added 'if' to fix SyntaxError and added balance check to prevent crashes
+    # FIXED WITHDRAWAL
     if st.session_state.action_type == "WITH":
         if data['wallet'] < 100:
-            st.error("❌ Insufficient Balance. You need at least ₱100.00 to withdraw.")
+            st.error("❌ Insufficient Balance. You need at least ₱100.00.")
             if st.button("Close"): st.session_state.action_type = None; st.rerun()
         else:
             with st.form("w"):
                 amt_w = st.number_input("Amount", min_value=100.0, max_value=float(data['wallet']))
-                bn = st.text_input("Bank / Wallet Name")
-                an = st.text_input("Account Name")
-                anum = st.text_input("Account Number")
-                if st.form_submit_button("Request Withdrawal"):
+                bn, an, anum = st.text_input("Bank"), st.text_input("Account Name"), st.text_input("Account Number")
+                if st.form_submit_button("Request"):
                     data['wallet'] -= amt_w
-                    data.setdefault('pending_actions', []).append({
-                        "type": "WITHDRAW", "amount": amt_w, "bank": bn, 
-                        "acc_name": an, "acc_num": anum, "date": str(datetime.now())
-                    })
-                    update_user(st.session_state.user, data)
-                    st.success("Requested!")
-                    st.session_state.action_type = None
-                    st.rerun()
+                    data.setdefault('pending_actions', []).append({"type": "WITHDRAW", "amount": amt_w, "bank": bn, "acc_name": an, "acc_num": anum, "date": str(datetime.now())})
+                    update_user(st.session_state.user, data); st.success("Requested!"); st.session_state.action_type = None; st.rerun()
 
+    # FIXED REINVEST
     if st.session_state.action_type == "REIN":
         if data['wallet'] < 100:
-            st.error("❌ Insufficient Balance. You need at least ₱100.00 to reinvest.")
+            st.error("❌ Insufficient Balance. You need at least ₱100.00.")
             if st.button("Close"): st.session_state.action_type = None; st.rerun()
         else:
             with st.form("r"):
@@ -182,8 +166,34 @@ elif st.session_state.user:
                 if st.form_submit_button("Reinvest Now"):
                     data['wallet'] -= amt_r
                     data.setdefault('inv', []).append({"amount": amt_r, "start_time": datetime.now().isoformat()})
-                    update_user(st.session_state.user, data)
-                    st.success("Cycle Started!")
-                    st.session_state.action_type = None
-                    st.rerun()
+                    update_user(st.session_state.user, data); st.success("Started!"); st.session_state.action_type = None; st.rerun()
+
+# --- ROUTE C: LOGIN ---
+elif st.session_state.page == "login":
+    st.markdown("<h1 style='text-align:center;'>ACCESS PORTAL</h1>", unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    if c1.button("LOG IN"): st.session_state.sub_page = "l_form"
+    if c2.button("REGISTER"): st.session_state.sub_page = "r_form"
+    if st.session_state.sub_page == "l_form":
+        u, p = st.text_input("USERNAME").upper().strip(), st.text_input("PIN", type="password")
+        if st.button("ENTER"):
+            reg = load_registry()
+            ud = reg.get(u.replace(" ", "_")) or reg.get(u)
+            if ud and str(ud['pin']) == str(p):
+                st.session_state.user = u.replace(" ", "_"); st.rerun()
+    elif st.session_page == "r_form":
+        f, l, p = st.text_input("FIRST").upper(), st.text_input("LAST").upper(), st.text_input("PIN", type="password")
+        if st.button("SUBMIT"):
+            update_user(f"{f}_{l}", {"pin": p, "wallet": 0.0, "inv": [], "full_name": f"{f} {l}", "pending_actions": []})
+            st.success("Registered!"); st.rerun()
+
+# --- ROUTE D: AD FRONT ---
+else:
+    st.markdown('<h1 style="text-align:center;">ISMEX EXCHANGE</h1>', unsafe_allow_html=True)
+    col_a, col_b = st.columns([0.1, 0.9])
+    if col_a.button("⛔"): st.session_state.admin_mode = not st.session_state.admin_mode
+    if col_b.button("🚀 JOIN NOW"): st.session_state.page = "login"; st.rerun()
+    if st.session_state.admin_mode:
+        if st.text_input("Code", type="password") == "0102030405":
+            st.session_state.is_boss = True; st.rerun()
                     
