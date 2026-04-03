@@ -134,25 +134,51 @@ elif st.session_state.user:
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
                 else: st.error("Please upload your receipt.")
 
-    # WITHDRAW FORM
+        # WITHDRAW FORM
     if st.session_state.action_type == "WITH":
         with st.form("w"):
             st.markdown("### 💸 WITHDRAWAL REQUEST")
-            amt_w = st.number_input("Withdrawal Amount", min_value=1.0, max_value=float(data.get('wallet', 0.0)))
+            
+            # Fix: Ensure max_value is never smaller than min_value to prevent crashing
+            current_wallet = float(data.get('wallet', 0.0))
+            amt_w = st.number_input(
+                "Withdrawal Amount", 
+                min_value=0.0, 
+                max_value=max(0.0, current_wallet),
+                step=100.0
+            )
+            
             bank_n = st.text_input("Bank / Wallet Name (e.g. GCASH, BPI)")
             acct_num = st.text_input("Account Number")
             acct_name = st.text_input("Account Name")
-            if st.form_submit_button("SUBMIT WITHDRAWAL"):
-                if bank_n and acct_num and acct_name:
+            
+            # The missing submit button
+            submit_w = st.form_submit_button("SUBMIT WITHDRAWAL")
+            
+            if submit_w:
+                if current_wallet <= 0:
+                    st.error("Your balance is ₱0.00. You cannot withdraw at this time.")
+                elif amt_w <= 0:
+                    st.error("Please enter an amount greater than 0.")
+                elif bank_n and acct_num and acct_name:
                     data['wallet'] -= amt_w
                     data.setdefault('pending_actions', []).append({
                         "type": "WITHDRAW", "amount": amt_w, "bank": bank_n, 
-                        "acct_num": acct_num, "acct_name": acct_name, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        "acct_num": acct_num, "acct_name": acct_name, 
+                        "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     })
-                    data.setdefault('history', []).append({"type": "WITHDRAW", "amount": amt_w, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "PENDING"})
-                    update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
-                else: st.error("Please fill in all banking details.")
-
+                    data.setdefault('history', []).append({
+                        "type": "WITHDRAW", "amount": amt_w, 
+                        "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 
+                        "status": "PENDING"
+                    })
+                    update_user(st.session_state.user, data)
+                    st.session_state.action_type = None
+                    st.success("Withdrawal request sent!")
+                    st.rerun()
+                else:
+                    st.error("Please fill in all banking details.")
+                    
     st.markdown("### 🚀 RUNNING CAPITALS")
     active = data.get('inv', [])
     if not active: st.info("No running capitals.")
