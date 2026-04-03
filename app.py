@@ -214,13 +214,29 @@ st.markdown(f"""
                 active.pop(idx)
                 update_user(st.session_state.user, data); st.rerun()
 
-    # --- REFERRALS ---
-    st.divider()
-    st.markdown("### 🤝 REFERRAL COMMISSIONS (20%)")
-    comms = data.get('commissions', [])
-    if comms:
-        table_rows = [{"Invite Name": c.get('referee'), "1st Deposit": f"₱{c.get('deposit', 0):,.2f}", "Bonus": f"₱{c.get('amt', 0):,.2f}", "Status": ("✅ Received" if c.get('status') == "CLAIMED" else "⏳ Pending")} for c in comms]
-        st.table(table_rows)
+    # --- PLACE THIS IN THE 'elif st.session_state.user:' SECTION ---
+
+st.markdown("### 🤝 REFERRAL PROGRAM")
+
+# YOUR NEW CLEAN GITHUB LINK
+clean_base_url = "https://twee-gith.github.io/ISMEX-PHILIPPINES/" 
+formatted_name = st.session_state.user.replace(" ", "+")
+ref_link = f"{clean_base_url}?ref={formatted_name}"
+
+# VISUAL BOX FOR THE LINK
+st.markdown(f"""
+    <div style="background: #111; padding: 20px; border-radius: 15px; border: 2px dashed #00ff88; text-align: center;">
+        <p style="color: #8c8f99; margin-bottom: 10px; font-weight: bold;">YOUR UNIQUE REFERRAL LINK:</p>
+        <code style="color: #00ff88; font-size: 16px; word-wrap: break-word;">{ref_link}</code>
+    </div>
+""", unsafe_allow_html=True)
+
+# THE COPY BUTTON
+if st.button("📋 CLICK TO COPY LINK"):
+    # This dummy button provides a clear visual for users to tap
+    st.write(f"**Link ready!** Long-press the green text above to copy.")
+    st.toast("Link displayed above!")
+
 
     # --- HISTORY ---
     st.markdown("### 📜 TRANSACTION HISTORY")
