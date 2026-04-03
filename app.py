@@ -143,25 +143,37 @@ elif st.session_state.user:
     reg = load_registry()
     data = reg.get(st.session_state.user, {})
     
-    # 1. GENERATE THE LINK FIRST
-    # Replace 'yourusername/repo' with your actual GitHub info from your screenshot
-    clean_base_url = "https://twee-gith.github.io/ISMEX-PHILIPPINES/" 
-    formatted_name = st.session_state.user.replace(" ", "+")
-    ref_link = f"{clean_base_url}?ref={formatted_name}"
+    # --- AUTOMATIC REFERRAL GENERATOR ---
+    # This uses your confirmed GitHub link
+    clean_url = "https://twee-gith.github.io/ISMEX-PHILIPPINES/"
+    user_name = str(st.session_state.user).replace(" ", "+").upper()
+    full_ref_link = f"{clean_url}?ref={user_name}"
 
-    # 2. SHOW THE LOGOUT AND USERNAME
-    st.write(f"Logged in as: **{st.session_state.user}**")
-    if st.button("LOGOUT"):
-        st.session_state.user = None
-        st.rerun()
+    # --- TOP NAV & LOGOUT ---
+    c1, c2 = st.columns([3, 1])
+    with c1: st.subheader(f"👤 {user_name}")
+    with c2: 
+        if st.button("LOGOUT"):
+            st.session_state.user = None
+            st.rerun()
 
-    # 3. SHOW THE REFERRAL BOX AT THE VERY TOP
+    # --- THE MISSING REFERRAL BOX (STOPS THE EDITING!) ---
     st.markdown(f"""
-        <div style="background: #111; padding: 15px; border-radius: 10px; border: 2px solid #00ff88; margin-bottom: 20px;">
-            <p style="color: #8c8f99; font-size: 12px; margin-bottom: 5px; font-weight: bold;">SHARE YOUR LINK TO EARN 20%:</p>
-            <code style="color: #00ff88; font-size: 14px; word-break: break-all;">{ref_link}</code>
+        <div style="background: #111; padding: 15px; border-radius: 12px; border: 2px dashed #00ff88; margin-bottom: 20px;">
+            <p style="color: #8c8f99; font-size: 11px; font-weight: bold; margin-bottom: 5px;">YOUR RECRUITMENT LINK:</p>
+            <code style="color: #00ff88; font-size: 14px; word-break: break-all;">{full_ref_link}</code>
+            <p style="color: #555; font-size: 10px; margin-top: 5px;">Hold text to copy and share</p>
         </div>
     """, unsafe_allow_html=True)
+
+    # --- WITHDRAWABLE BALANCE ---
+    st.markdown(f"""
+        <div style="background: #1c1e26; padding: 20px; border-radius: 15px; text-align: center; border: 1px solid #333;">
+            <p style="color:#8c8f99; font-size:12px; margin-bottom:5px;">AVAILABLE BALANCE</p>
+            <h1 style="color:#00ff88; font-size:45px; margin:0;">₱{data.get('wallet', 0.0):,.2f}</h1>
+        </div>
+    """, unsafe_allow_html=True)
+    
     
     # Optional Copy Reminder
     if st.button("📋 HOW TO COPY"):
