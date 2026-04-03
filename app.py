@@ -66,7 +66,12 @@ if st.session_state.is_boss:
     for username, u_data in reg.items():
         pending_list = u_data.get('pending_actions', [])
         for idx, action in enumerate(list(pending_list)):
-            with st.expander(f"{action['type']} - {username} - ₱{action.get('amount', 0):,.2f}"):
+            # Admin can now see Bank Details for Withdrawals
+            label = f"{action['type']} - {username} - ₱{action.get('amount', 0):,.2f}"
+            with st.expander(label):
+                if action['type'] == "WITHDRAW":
+                    st.warning(f"**BANK:** {action.get('bank')}\n\n**ACCT #:** {action.get('acct_num')}\n\n**NAME:** {action.get('acct_name')}")
+                
                 ca, cr = st.columns(2)
                 if ca.button("✅ APPROVE", key=f"app_{username}_{idx}"):
                     if action['type'] == "DEPOSIT":
@@ -87,17 +92,13 @@ if st.session_state.is_boss:
                         if c_idx is not None and len(u_data.get('commissions', [])) > c_idx:
                             u_data['commissions'][c_idx]['status'] = "CLAIMED"
 
-                    # History update on approval
-                    u_data.setdefault('history', []).append({
-                        "type": action['type'], 
-                        "amount": action['amount'], 
-                        "date": datetime.now().strftime("%Y-%m-%d %I:%M %p"), 
-                        "status": "CONFIRMED"
-                    })
+                    u_data.setdefault('history', []).append({"type": action['type'], "amount": action['amount'], "date": datetime.now().strftime("%Y-%m-%d %I:%M %p"), "status": "CONFIRMED"})
                     u_data['pending_actions'].pop(idx)
                     update_user(username, u_data); st.rerun()
                 
                 if cr.button("❌ REJECT", key=f"rej_{username}_{idx}"):
+                    if action['type'] == "WITHDRAW":
+                        u_data['wallet'] = u_data.get('wallet', 0.0) + action['amount'] # Refund if rejected
                     u_data['pending_actions'].pop(idx); update_user(username, u_data); st.rerun()
 
 # ==========================================
@@ -119,25 +120,38 @@ elif st.session_state.user:
     if c2.button("💸 WITHDRAW"): st.session_state.action_type = "WITH"
     if c3.button("♻️ REINVEST"): st.session_state.action_type = "REIN"
 
+    # DEPOSIT FORM
     if st.session_state.action_type == "DEP":
         with st.form("d"):
             st.markdown("### 📥 DEPOSIT REQUEST")
             st.info("💳 **GCASH:** 09XXXXXXXX | **NAME:** T*** S*** T.")
             amt_d = st.number_input("Amount (Min: ₱500)", min_value=500.0)
-            # RESTORED BROWSE RECEIPT
             uploaded_file = st.file_uploader("Browse Receipt", type=['jpg', 'jpeg', 'png'])
             if st.form_submit_button("SEND TO ADMIN"):
                 if uploaded_file:
-                    data.setdefault('pending_actions', []).append({
-                        "type": "DEPOSIT", "amount": amt_d, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    })
-                    # Add to history as pending
-                    data.setdefault('history', []).append({
-                        "type": "DEPOSIT", "amount": amt_d, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "PENDING"
-                    })
+                    data.setdefault('pending_actions', []).append({"type": "DEPOSIT", "amount": amt_d, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
+                    data.setdefault('history', []).append({"type": "DEPOSIT", "amount": amt_d, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "PENDING"})
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
-                else:
-                    st.error("Please upload your receipt.")
+                else: st.error("Please upload your receipt.")
+
+    # WITHDRAW FORM
+    if st.session_state.action_type == "WITH":
+        with st.form("w"):
+            st.markdown("### 💸 WITHDRAWAL REQUEST")
+            amt_w = st.number_input("Withdrawal Amount", min_value=1.0, max_value=float(data.get('wallet', 0.0)))
+            bank_n = st.text_input("Bank / Wallet Name (e.g. GCASH, BPI)")
+            acct_num = st.text_input("Account Number")
+            acct_name = st.text_input("Account Name")
+            if st.form_submit_button("SUBMIT WITHDRAWAL"):
+                if bank_n and acct_num and acct_name:
+                    data['wallet'] -= amt_w
+                    data.setdefault('pending_actions', []).append({
+                        "type": "WITHDRAW", "amount": amt_w, "bank": bank_n, 
+                        "acct_num": acct_num, "acct_name": acct_name, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    })
+                    data.setdefault('history', []).append({"type": "WITHDRAW", "amount": amt_w, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "PENDING"})
+                    update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
+                else: st.error("Please fill in all banking details.")
 
     st.markdown("### 🚀 RUNNING CAPITALS")
     active = data.get('inv', [])
@@ -170,16 +184,14 @@ elif st.session_state.user:
             if c['status'] == "UNCLAIMED" and st.button(f"CLAIM ₱{c['amt']}", key=f"c_{idx}"):
                 data.setdefault('pending_actions', []).append({"type": "COMMISSION_REQUEST", "amount": c['amt'], "comm_index": idx})
                 update_user(st.session_state.user, data); st.rerun()
-    else:
-        st.info("No referral commissions yet.")
+    else: st.info("No referral commissions yet.")
 
     st.markdown("### 📜 TRANSACTION HISTORY")
-    # All transactions (including pending ones from history list) appear here
     for h in reversed(data.get('history', [])):
         st.write(f"✅ **{h.get('status', 'CONFIRMED')}**: {h['type']} - ₱{h['amount']:,.2f} | {h['date']}")
 
 # ==========================================
-# BLOCK 5: LOGIN & LANDING
+# BLOCK 5: LOGIN & LANDING (REST OMITTED FOR BREVITY, PRESERVED IN CODE)
 # ==========================================
 elif st.session_state.page == "login":
     st.title("ACCESS PORTAL")
@@ -210,4 +222,4 @@ else:
     if col_b.button("🚀 PRESS HERE TO REGISTER / LOGIN", use_container_width=True): st.session_state.page = "login"; st.rerun()
     if st.session_state.admin_mode:
         if st.text_input("code", type="password") == "0102030405": st.session_state.is_boss = True; st.rerun()
-            
+                    
