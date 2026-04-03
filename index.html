@@ -3,38 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bagong Pilipinas Stock Market</title>
+    <title>ISMEX PHILIPPINES</title>
     <style>
-        /* This removes all scrollbars and margins from the main page */
-        body, html { 
-            margin: 0; 
-            padding: 0; 
-            height: 100%; 
-            width: 100%;
-            overflow: hidden; 
-            background-color: #0e1117; /* Matches your app's dark theme */
-        }
-
-        /* This container 'clips' the app to hide the bottom face/icon */
-        .app-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: calc(100% + 60px); /* Makes the app taller than the screen */
-            overflow: hidden;
-        }
-
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background-color: #0e1117; }
+        .app-container { position: absolute; top: 0; left: 0; width: 100%; height: calc(100% + 60px); overflow: hidden; }
+        iframe { width: 100%; height: 100%; border: none; }
     </style>
 </head>
 <body>
     <div class="app-container">
-        <iframe src="https://investment-a6i6xonbqcuytzdgvkx9m6.streamlit.app/?embed=true"></iframe>
+        <iframe id="app-frame" src="https://investment-a6i6xonbqcuytzdgvkx9m6.streamlit.app/?embed=true"></iframe>
     </div>
+
+    <script>
+        // Automatically pass the ?ref= parameter to the Streamlit app
+        window.onload = function() {
+            var urlParams = new URLSearchParams(window.location.search);
+            var ref = urlParams.get('ref');
+            if (ref) {
+                var iframe = document.getElementById('app-frame');
+                iframe.src = "https://investment-a6i6xonbqcuytzdgvkx9m6.streamlit.app/?embed=true&ref=" + encodeURIComponent(ref);
+            }
+        };
+    </script>
 </body>
 </html>
