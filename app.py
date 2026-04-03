@@ -27,7 +27,7 @@ if 'admin_mode' not in st.session_state: st.session_state.admin_mode = False
 if 'action_type' not in st.session_state: st.session_state.action_type = None
 
 # ==========================================
-# BLOCK 2: UI STYLES & MOBILE FIXES
+# BLOCK 2: UI STYLES & BRANDING REMOVAL
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
@@ -36,8 +36,15 @@ if "ref" in st.query_params:
     st.session_state.url_ref = st.query_params["ref"].replace("+", " ").upper().strip()
 current_ref = st.session_state.get("url_ref", "")
 
+# CSS TO HIDE STREAMLIT BRANDING AND FIX BUTTONS
 st.markdown("""
     <style>
+    /* HIDE STREAMLIT FOOTER, HAMBURGER MENU, AND PROFILE FACE */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .stDeployButton {display:none;}
+    
     /* Global Background */
     .stApp { background-color: #0e1117; color: white; }
     
@@ -49,12 +56,6 @@ st.markdown("""
         border-radius: 8px !important;
         font-weight: bold !important;
         text-transform: uppercase !important;
-    }
-
-    /* Target the specific Home Page button for extra visibility */
-    div.stButton > button[kind="primary"] {
-        background-color: #1c1e26 !important;
-        color: white !important;
     }
 
     /* Dashboard Elements */
@@ -141,7 +142,6 @@ elif st.session_state.user:
         </div>
     """, unsafe_allow_html=True)
 
-    # Dashboard Actions
     if st.button("📥 DEPOSIT"): st.session_state.action_type = "DEP"
     if st.button("💸 WITHDRAW"): st.session_state.action_type = "WITH"
     if st.button("♻️ REINVEST"): st.session_state.action_type = "REIN"
@@ -154,7 +154,7 @@ elif st.session_state.user:
                 data.setdefault('pending_actions', []).append({"type": "DEPOSIT", "amount": amt_d, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
                 update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
 
-    # --- RUNNING CAPITALS ---
+    # --- RUNNING CAPITALS (WITH PROGRESS BAR & LIVE PROFIT) ---
     st.markdown("### 🚀 RUNNING CAPITALS")
     active = data.get('inv', [])
     if not active: st.info("No running capitals.")
@@ -186,7 +186,7 @@ elif st.session_state.user:
                 active.pop(idx)
                 update_user(st.session_state.user, data); st.rerun()
 
-    # --- REFERRALS ---
+    # --- REFERRAL COMMISSIONS ---
     st.divider()
     st.markdown("### 🤝 REFERRAL COMMISSIONS (20%)")
     comms = data.get('commissions', [])
@@ -230,7 +230,6 @@ else:
     with col_a:
         if st.button("⛔"): st.session_state.admin_mode = not st.session_state.admin_mode
     with col_b:
-        # THE PRIMARY BUTTON - Forced visible text color
         if st.button("🚀 PRESS HERE TO REGISTER / LOGIN", use_container_width=True): 
             st.session_state.page = "login"
             st.rerun()
@@ -239,3 +238,4 @@ else:
         if st.text_input("code", type="password") == "0102030405": 
             st.session_state.is_boss = True
             st.rerun()
+    
