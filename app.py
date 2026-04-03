@@ -136,11 +136,45 @@ if st.session_state.is_boss:
                     update_user(username, u_data)
                     st.rerun()
 
-# --- USER DASHBOARD ---
+# ==========================================
+# USER DASHBOARD SECTION
+# ==========================================
 elif st.session_state.user:
     reg = load_registry()
     data = reg.get(st.session_state.user, {})
-    if 'wallet' not in data: data['wallet'] = 0.0
+    
+    # 1. GENERATE THE LINK FIRST
+    # Replace 'yourusername/repo' with your actual GitHub info from your screenshot
+    clean_base_url = "https://twee-gith.github.io/ISMEX-PHILIPPINES/" 
+    formatted_name = st.session_state.user.replace(" ", "+")
+    ref_link = f"{clean_base_url}?ref={formatted_name}"
+
+    # 2. SHOW THE LOGOUT AND USERNAME
+    st.write(f"Logged in as: **{st.session_state.user}**")
+    if st.button("LOGOUT"):
+        st.session_state.user = None
+        st.rerun()
+
+    # 3. SHOW THE REFERRAL BOX AT THE VERY TOP
+    st.markdown(f"""
+        <div style="background: #111; padding: 15px; border-radius: 10px; border: 2px solid #00ff88; margin-bottom: 20px;">
+            <p style="color: #8c8f99; font-size: 12px; margin-bottom: 5px; font-weight: bold;">SHARE YOUR LINK TO EARN 20%:</p>
+            <code style="color: #00ff88; font-size: 14px; word-break: break-all;">{ref_link}</code>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Optional Copy Reminder
+    if st.button("📋 HOW TO COPY"):
+        st.info("Long-press the green link above and select 'Copy link text'.")
+
+    # 4. NOW SHOW THE BALANCE
+    st.markdown(f"""
+        <div class="balance-box">
+            <p style="color:#8c8f99; font-size:14px; margin-bottom:5px;">WITHDRAWABLE BALANCE</p>
+            <h1 style="color:#00ff88; font-size:50px; margin:0;">₱{data.get('wallet', 0.0):,.2f}</h1>
+        </div>
+    """, unsafe_allow_html=True)
+    
 
     st.write(f"Logged in as: **{st.session_state.user}**")
     if st.button("LOGOUT"):
