@@ -87,7 +87,13 @@ if st.session_state.is_boss:
                         if c_idx is not None and len(u_data.get('commissions', [])) > c_idx:
                             u_data['commissions'][c_idx]['status'] = "CLAIMED"
 
-                    u_data.setdefault('history', []).append({"type": action['type'], "amount": action['amount'], "date": datetime.now().strftime("%Y-%m-%d %I:%M %p"), "status": "CONFIRMED"})
+                    # History update on approval
+                    u_data.setdefault('history', []).append({
+                        "type": action['type'], 
+                        "amount": action['amount'], 
+                        "date": datetime.now().strftime("%Y-%m-%d %I:%M %p"), 
+                        "status": "CONFIRMED"
+                    })
                     u_data['pending_actions'].pop(idx)
                     update_user(username, u_data); st.rerun()
                 
@@ -106,10 +112,8 @@ elif st.session_state.user:
     if st.button("LOGOUT"):
         st.session_state.user = None; st.session_state.page = "ad"; st.rerun()
 
-    # BALANCE DISPLAY
     st.markdown(f"""<div class="balance-box"><p style="color:#8c8f99; font-size:12px; margin-bottom:5px;">WITHDRAWABLE BALANCE</p><h1 style="color:#00ff88; font-size:45px; margin:0;">₱{data.get('wallet', 0.0):,.2f}</h1></div>""", unsafe_allow_html=True)
 
-    # ACTIONS
     c1, c2, c3 = st.columns(3)
     if c1.button("📥 DEPOSIT"): st.session_state.action_type = "DEP"
     if c2.button("💸 WITHDRAW"): st.session_state.action_type = "WITH"
@@ -117,13 +121,24 @@ elif st.session_state.user:
 
     if st.session_state.action_type == "DEP":
         with st.form("d"):
+            st.markdown("### 📥 DEPOSIT REQUEST")
             st.info("💳 **GCASH:** 09XXXXXXXX | **NAME:** T*** S*** T.")
             amt_d = st.number_input("Amount (Min: ₱500)", min_value=500.0)
+            # RESTORED BROWSE RECEIPT
+            uploaded_file = st.file_uploader("Browse Receipt", type=['jpg', 'jpeg', 'png'])
             if st.form_submit_button("SEND TO ADMIN"):
-                data.setdefault('pending_actions', []).append({"type": "DEPOSIT", "amount": amt_d, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
-                update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
+                if uploaded_file:
+                    data.setdefault('pending_actions', []).append({
+                        "type": "DEPOSIT", "amount": amt_d, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    })
+                    # Add to history as pending
+                    data.setdefault('history', []).append({
+                        "type": "DEPOSIT", "amount": amt_d, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "PENDING"
+                    })
+                    update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
+                else:
+                    st.error("Please upload your receipt.")
 
-    # RUNNING CAPITALS
     st.markdown("### 🚀 RUNNING CAPITALS")
     active = data.get('inv', [])
     if not active: st.info("No running capitals.")
@@ -144,12 +159,10 @@ elif st.session_state.user:
 
     st.divider()
 
-    # REFERRAL LINK (REPOSITIONED & SIMPLIFIED)
     st.markdown("### 🤝 REFERRAL PROGRAM")
     my_link = f"https://twee-gith.github.io/ISMEX-PHILIPPINES/?ref={user_display.replace(' ', '+')}"
     st.code(my_link, language="text")
 
-    # REFERRAL COMMISSIONS TABLE
     comms = data.get('commissions', [])
     if comms:
         for idx, c in enumerate(comms):
@@ -160,10 +173,10 @@ elif st.session_state.user:
     else:
         st.info("No referral commissions yet.")
 
-    # HISTORY
     st.markdown("### 📜 TRANSACTION HISTORY")
+    # All transactions (including pending ones from history list) appear here
     for h in reversed(data.get('history', [])):
-        st.write(f"✅ **{h.get('status', 'CONFIRMED')}**: ₱{h['amount']:,.2f} | {h['date']}")
+        st.write(f"✅ **{h.get('status', 'CONFIRMED')}**: {h['type']} - ₱{h['amount']:,.2f} | {h['date']}")
 
 # ==========================================
 # BLOCK 5: LOGIN & LANDING
@@ -186,7 +199,7 @@ elif st.session_state.page == "login":
         if st.button("REGISTER"):
             reg = load_registry()
             if fn and len(p1) == 6:
-                reg[fn] = {"pin": p1, "wallet": 0.0, "inv": [], "full_name": fn, "referral": rn, "pending_actions": [], "history": [], "commissions": []}
+                reg[fn] = {"pin": p1, "wallet": 0.0, "inv": [], "full_name": fn, "referral": rn, "pending_actions": [], "history": [], "commissions": [], "has_deposited": False}
                 update_user(fn, reg[fn]); st.success("Registered! Login now.")
 else:
     st.markdown("<h1 style='color: #007BFF;'>INTERNATIONAL STOCK MARKET EXCHANGE! 📊📈</h1>", unsafe_allow_html=True)
@@ -197,4 +210,4 @@ else:
     if col_b.button("🚀 PRESS HERE TO REGISTER / LOGIN", use_container_width=True): st.session_state.page = "login"; st.rerun()
     if st.session_state.admin_mode:
         if st.text_input("code", type="password") == "0102030405": st.session_state.is_boss = True; st.rerun()
-    
+            
