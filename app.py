@@ -164,7 +164,7 @@ elif st.session_state.user:
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
                 else: st.error("Check balance and fill all details.")
 
-        st.markdown("### 🚀 RUNNING CAPITALS")
+            st.markdown("### 🚀 RUNNING CAPITALS")
     active = data.get('inv', [])
     if not active: 
         st.info("No running capitals.")
@@ -172,44 +172,42 @@ elif st.session_state.user:
         now = datetime.now()
         for idx, a in reversed(list(enumerate(active))):
             start_dt = datetime.fromisoformat(a['start_time'])
-            # Calculate the exact unlock time (7 Days later)
+            # EXACT UNLOCK: 7 Days from start
             unlock_dt = start_dt + timedelta(days=7)
             
-            # Progress calculation
+            # Progress logic
             total_seconds = 7 * 86400
-            elapsed_seconds = (now - start_dt).total_seconds()
-            progress = min(1.0, elapsed_seconds / total_seconds)
+            elapsed = (now - start_dt).total_seconds()
+            progress = min(1.0, elapsed / total_seconds)
             
             total_roi = a['amount'] * 1.20
             live_profit = (a['amount'] * 0.20) * progress
             
-            # UI Card
+            # Formatting the display
+            unlock_str = unlock_dt.strftime("%b %d, %Y at %I:%M %p")
+            
             st.markdown(f"""
                 <div class='hist-card'>
                     <span class='roi-text'>ROI: ₱{total_roi:,.2f}</span>
                     <b>CAPITAL: ₱{a['amount']:,.2f}</b><br>
                     <div class='live-profit'>
                         LIVE PROFIT: ₱{live_profit:,.2f}<br>
-                        🔓 UNLOCKS ON: {unlock_dt.strftime('%Y-%m-%d %I:%M %p')}
+                        📅 UNLOCKS: {unlock_str}
                     </div>
                 </div>
             """, unsafe_allow_html=True)
             
             st.progress(progress)
             
-            # Button Logic: Only clickable if progress is 100% (7 days passed)
-            can_pull_out = now >= unlock_dt
-            if st.button(f"📥 PULL OUT ₱{total_roi:,.2f}", key=f"p_{idx}", disabled=not can_pull_out):
+            # THE LOCK: Button only works if time has passed
+            is_locked = now < unlock_dt
+            if st.button(f"📥 {'LOCKED' if is_locked else 'PULL OUT'} ₱{total_roi:,.2f}", key=f"p_{idx}", disabled=is_locked):
                 data['wallet'] = data.get('wallet', 0.0) + total_roi
-                data.setdefault('history', []).append({
-                    "type": "PULL_OUT", 
-                    "amount": total_roi, 
-                    "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 
-                    "status": "CONFIRMED"
-                })
+                data.setdefault('history', []).append({"type": "PULL_OUT", "amount": total_roi, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "CONFIRMED"})
                 active.pop(idx)
                 update_user(st.session_state.user, data)
                 st.rerun()
+                
         
     st.divider()
     st.markdown("### 🤝 REFERRAL PROGRAM")
