@@ -26,9 +26,10 @@
         const urlParams = new URLSearchParams(window.location.search);
         const ref = urlParams.get('ref');
         
-        // Use the exact URL from your browser bar when you open Streamlit
-        let targetURL = "https://change.streamlit.app/?embed=true&embed_options=dark_theme";
+        // Updated to your actual Streamlit deployment URL
+        let targetURL = "https://investment-a6i6xonbqcuytzdgvkx9m6.streamlit.app/?embed=true&embed_options=dark_theme";
         
+        // This ensures the ?ref= stays attached when loading the iframe
         if (ref) { 
             targetURL += "&ref=" + encodeURIComponent(ref); 
         }
@@ -36,7 +37,6 @@
         const frame = document.getElementById('main-app');
         frame.src = targetURL;
         
-        // Hide loading message once the app starts to load
         frame.onload = function() {
             document.getElementById('loading').style.display = 'none';
         };
