@@ -213,8 +213,7 @@ elif st.session_state.user:
 
     st.divider()
     st.markdown("### 🤝 REFERRAL PROGRAM")
-    st.code(f"https://twee-gith.github.io/ISMEX-PHILIPPINES/?ref={user_display.replace(' ', '+')}", language="text")
-
+    st.code(f"https://change.streamlit.app/?ref={user_display.replace(' ', '+')}", language="text")
     comms = data.get('commissions', [])
     if comms:
         for idx, c in enumerate(comms):
