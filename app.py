@@ -4,21 +4,29 @@ from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. UI WRAPPER (RESTORED - HIDES ICON/FACE)
+# 1. THE INJECTED WRAPPER (HIDDEN BY SIZE)
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
-# Restoring your original CSS that works with the GitHub custom display
+# Adjusting height and width to force the branding off-screen
 st.markdown("""
     <style>
+    /* HIDE STREAMLIT ELEMENTS */
     header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, 
     .viewerBadge_container__1QSob, .viewerBadge_link__1QSob,
-    [data-testid="stDecoration"], [data-testid="stStatusWidget"] { 
+    [data-testid="stDecoration"], [data-testid="stStatusWidget"],
+    div[class^="viewerBadge"] { 
         visibility: hidden !important; 
         display: none !important; 
     }
-    div[class^="viewerBadge"] { display: none !important; }
     
+    /* OVERSIZE THE CONTAINER TO PUSH THE BOTTOM BAR OUT OF VIEW */
+    [data-testid="stAppViewContainer"] {
+        padding-bottom: 150px !important;
+        height: 110vh !important;
+    }
+
+    /* THEME COLORS - PRESERVED */
     .stApp { background-color: #0e1117 !important; color: white !important; }
     div.stButton > button { background-color: #1c1e26 !important; color: #ffffff !important; border: 2px solid #333 !important; border-radius: 8px !important; width: 100% !important; }
     .hist-card { background: #1c1e26; padding: 15px; border-radius: 5px; margin-bottom: 8px; border-left: 5px solid #00ff88; }
@@ -61,7 +69,7 @@ if "ref" in st.query_params:
     st.session_state["captured_ref"] = st.query_params["ref"].replace("+", " ").upper().strip()
 
 # ==========================================
-# 3. ADMIN PANEL (PRESERVED)
+# 3. ADMIN PANEL
 # ==========================================
 if st.session_state.is_boss:
     st.title("👑 ADMIN CONTROL")
@@ -86,7 +94,7 @@ if st.session_state.is_boss:
                     u_data['pending_actions'].pop(idx); update_user(user, u_data); st.rerun()
 
 # ==========================================
-# 4. USER DASHBOARD (WITH HISTORY SYNC)
+# 4. USER DASHBOARD
 # ==========================================
 elif st.session_state.user:
     reg = load_registry()
@@ -131,7 +139,7 @@ elif st.session_state.user:
 
     if st.button("LOGOUT"): st.session_state.user = None; st.rerun()
 
-    # --- REFERRAL INFO (PRESERVED) ---
+    # --- REFERRAL INFO ---
     st.markdown("---")
     st.subheader("👥 REFERRAL INFO")
     u_ref = st.session_state.user.replace(' ', '+')
@@ -151,7 +159,7 @@ elif st.session_state.user:
             data.setdefault('history', []).append({"type": "COMM_WITHDRAW", "amount": total_c, "date": now_str, "status": "PENDING", "request_id": req_id})
             update_user(st.session_state.user, data); st.rerun()
 
-    # --- ACTIVE CAPITALS (PRESERVED) ---
+    # --- ACTIVE CAPITALS ---
     st.markdown("---")
     st.markdown("### 🚀 ACTIVE CAPITALS")
     active = data.get('inv', [])
@@ -169,14 +177,14 @@ elif st.session_state.user:
                 active.pop(len(active)-1-idx)
                 update_user(st.session_state.user, data); st.rerun()
 
-    # --- HISTORY SECTION ---
+    # --- HISTORY ---
     st.markdown("### 📜 HISTORY")
     for h in reversed(data.get('history', [])):
         c = "#ffaa00" if h.get('status') == "PENDING" else "#00ff88"
         st.markdown(f"**{h.get('type')}** | ₱{h.get('amount',0):,.2f} | {h.get('date')} | <span style='color:{c}'>{h.get('status')}</span>", unsafe_allow_html=True)
 
 # ==========================================
-# 5. LANDING & AUTH (PRESERVED)
+# 5. LANDING & AUTH
 # ==========================================
 elif st.session_state.page == "auth":
     tab1, tab2 = st.tabs(["LOGIN", "REGISTER"])
@@ -210,4 +218,4 @@ else:
     if st.session_state.admin_mode:
         if st.text_input("Admin Key", type="password") == "0102030405":
             st.session_state.is_boss = True; st.rerun()
-        
+    
