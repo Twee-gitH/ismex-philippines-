@@ -4,11 +4,11 @@ from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. THE INJECTED WRAPPER (PRESERVED)
+# 1. UI WRAPPER (RESTORED - HIDES ICON/FACE)
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
-# Keeping your original CSS injection for the GitHub custom display
+# Restoring your original CSS that works with the GitHub custom display
 st.markdown("""
     <style>
     header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, 
@@ -86,7 +86,7 @@ if st.session_state.is_boss:
                     u_data['pending_actions'].pop(idx); update_user(user, u_data); st.rerun()
 
 # ==========================================
-# 4. USER DASHBOARD (WITH ADDED HISTORY)
+# 4. USER DASHBOARD (WITH HISTORY SYNC)
 # ==========================================
 elif st.session_state.user:
     reg = load_registry()
@@ -103,7 +103,6 @@ elif st.session_state.user:
     if col2.button("📤 WITHDRAW"): st.session_state.action_type = "WIT"
     if col3.button("🔄 REINVEST"): st.session_state.action_type = "REI"
 
-    # --- ACTION FORMS ---
     if st.session_state.action_type == "DEP":
         with st.form("dep_f"):
             amt = st.number_input("Deposit Amount", min_value=500.0)
@@ -170,7 +169,7 @@ elif st.session_state.user:
                 active.pop(len(active)-1-idx)
                 update_user(st.session_state.user, data); st.rerun()
 
-    # --- HISTORY (ADDED) ---
+    # --- HISTORY SECTION ---
     st.markdown("### 📜 HISTORY")
     for h in reversed(data.get('history', [])):
         c = "#ffaa00" if h.get('status') == "PENDING" else "#00ff88"
@@ -211,4 +210,4 @@ else:
     if st.session_state.admin_mode:
         if st.text_input("Admin Key", type="password") == "0102030405":
             st.session_state.is_boss = True; st.rerun()
-            
+        
