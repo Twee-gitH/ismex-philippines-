@@ -167,22 +167,48 @@ elif st.session_state.user:
     for h in reversed(data.get('history', [])):
         st.write(f"✅ {h.get('type')} - ₱{h.get('amount',0):,.2f} | {h.get('date')}")
 
-# 5. LANDING PAGE
-elif st.session_state.page == "login":
+# ==========================================
+# 5. LANDING, LOGIN & REFERRAL CAPTURE
+# ==========================================
+
+# 1. Capture the Referral IMMEDIATELY before doing anything else
+if "ref" in st.query_params:
+    # This saves the referral name even if the URL changes later
+    st.session_state["captured_ref"] = st.query_params["ref"].replace("+", " ").upper().strip()
+
+# 2. Page Logic
+if st.session_state.page == "login":
     st.title("ACCESS PORTAL")
+    
+    # Show the captured referral so the user knows who invited them
+    if "captured_ref" in st.session_state:
+        st.success(f"🤝 Invited by: {st.session_state['captured_ref']}")
+    
     u = st.text_input("FULL NAME").upper().strip()
     p = st.text_input("PIN", type="password")
+    
     if st.button("LOGIN"):
         reg = load_registry()
-        if u in reg and str(reg[u]['pin']) == str(p): st.session_state.user = u; st.rerun()
-        else: st.error("Incorrect Name or PIN")
-    if st.button("BACK"): st.session_state.page = "ad"; st.rerun()
+        if u in reg and str(reg[u]['pin']) == str(p):
+            st.session_state.user = u
+            st.rerun()
+        else:
+            st.error("Incorrect Name or PIN")
+            
+    if st.button("BACK"):
+        st.session_state.page = "ad"
+        st.rerun()
 else:
     st.title("ISMEX PHILIPPINES 📊")
-    if st.button("🚀 GET STARTED / LOGIN", use_container_width=True): st.session_state.page = "login"; st.rerun()
+    if st.button("🚀 GET STARTED / LOGIN", use_container_width=True):
+        st.session_state.page = "login"
+        st.rerun()
     
     col_a, col_b = st.columns([0.1, 0.9])
-    if col_a.button("⛔"): st.session_state.admin_mode = not st.session_state.admin_mode
+    if col_a.button("⛔"):
+        st.session_state.admin_mode = not st.session_state.admin_mode
     if st.session_state.admin_mode:
         if st.text_input("Admin Key", type="password") == "0102030405":
-            st.session_state.is_boss = True; st.rerun()
+            st.session_state.is_boss = True
+            st.rerun()
+            
