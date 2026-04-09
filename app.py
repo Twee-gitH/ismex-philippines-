@@ -44,8 +44,61 @@ def update_user(name, data):
 for key, val in [('page','ad'), ('user',None), ('is_boss',False), ('admin_mode',False), ('action_type',None)]:
     if key not in st.session_state: st.session_state[key] = val
 
-# 2. THE FULL UI & INTERFACE
+# ==========================================
+# 2. UI STYLES (WRAPPED & CLEAN)
+# ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
+
+st.markdown("""
+    <style>
+    /* HIDE STREAMLIT BRANDING & DEVELOPER INFO */
+    header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu {
+        visibility: hidden !important;
+        display: none !important;
+    }
+    
+    /* REMOVE PADDING AT THE TOP */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0rem !important;
+    }
+
+    /* APP BACKGROUND & TEXT */
+    .stApp { 
+        background-color: #0e1117 !important; 
+        color: white !important; 
+    }
+
+    /* CUSTOM BUTTONS */
+    div.stButton > button {
+        background-color: #1c1e26 !important; 
+        color: #ffffff !important;
+        border: 2px solid #333 !important; 
+        border-radius: 8px !important;
+        font-weight: bold !important; 
+        width: 100% !important;
+    }
+
+    /* DASHBOARD CARDS */
+    .hist-card { 
+        background: #1c1e26; 
+        padding: 15px; 
+        border-radius: 5px; 
+        margin-bottom: 8px; 
+        border-left: 5px solid #00ff88; 
+    }
+    
+    .balance-box { 
+        background: #1c1e26; 
+        padding: 20px; 
+        border-radius: 10px; 
+        text-align: center; 
+        border: 1px solid #333; 
+        margin-bottom: 15px; 
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 
 # Handle Referrals from URL
 if "ref" in st.query_params:
