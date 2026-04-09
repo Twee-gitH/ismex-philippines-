@@ -4,14 +4,14 @@ from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. THE INJECTED WRAPPER (HIDDEN BY SIZE)
+# 1. THE INJECTED WRAPPER (COVER STRATEGY)
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
-# Adjusting height and width to force the branding off-screen
+# This creates a solid block that sits ON TOP of the Streamlit face/bar
 st.markdown("""
     <style>
-    /* HIDE STREAMLIT ELEMENTS */
+    /* 1. HIDE WHAT WE CAN */
     header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, 
     .viewerBadge_container__1QSob, .viewerBadge_link__1QSob,
     [data-testid="stDecoration"], [data-testid="stStatusWidget"],
@@ -19,11 +19,17 @@ st.markdown("""
         visibility: hidden !important; 
         display: none !important; 
     }
-    
-    /* OVERSIZE THE CONTAINER TO PUSH THE BOTTOM BAR OUT OF VIEW */
-    [data-testid="stAppViewContainer"] {
-        padding-bottom: 150px !important;
-        height: 110vh !important;
+
+    /* 2. THE BLACKOUT COVER: This covers the bottom 50px of the screen entirely */
+    .blackout-cover {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 60px; /* Adjust height if needed to cover the face fully */
+        background-color: #0e1117; /* Matches your background exactly */
+        z-index: 9999999; /* Forces it to sit above Streamlit's branding */
+        pointer-events: none; /* Allows you to click things 'under' it if necessary */
     }
 
     /* THEME COLORS - PRESERVED */
@@ -32,6 +38,8 @@ st.markdown("""
     .hist-card { background: #1c1e26; padding: 15px; border-radius: 5px; margin-bottom: 8px; border-left: 5px solid #00ff88; }
     .balance-box { background: #1c1e26; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #333; margin-bottom: 15px; }
     </style>
+    
+    <div class="blackout-cover"></div>
     """, unsafe_allow_html=True)
 
 # ==========================================
