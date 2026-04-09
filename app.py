@@ -10,25 +10,7 @@ st.set_page_config(page_title="ISMEX Official", layout="wide")
 
 st.markdown("""
     <style>
-    /* THE SHIELD: A solid wall over the bottom-right corner area */
-.mobile-shield {
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    width: 100%;
-    height: 100px; /* Increased to 100px to ensure it covers everything */
-    background-color: #0e1117; 
-    z-index: 999999999 !important; 
-    pointer-events: none;
-    border-top: 1px solid #1c1e26;
-}
-
-/* Push the actual app content up so the shield doesn't hide your buttons */
-.main .block-container {
-    padding-bottom: 120px !important;
-}
-
-    /* 1. Standard Hiding for known Streamlit classes */
+    /* 1. HIDE ALL NATIVE ELEMENTS */
     header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, 
     .viewerBadge_container__1QSob, .viewerBadge_link__1QSob,
     [data-testid="stDecoration"], [data-testid="stStatusWidget"],
@@ -43,16 +25,16 @@ st.markdown("""
         bottom: 0;
         right: 0;
         width: 100%;
-        height: 85px; /* Height covers the 'Created by' and red bar entirely */
-        background-color: #0e1117; /* Exact match to your background */
-        z-index: 2147483647 !important; /* Max CSS priority to sit on TOP of browser layers */
-        pointer-events: none; /* Allows clicks to pass through to app if needed */
+        height: 100px; 
+        background-color: #0e1117; 
+        z-index: 2147483647 !important; 
+        pointer-events: none;
         border-top: 1px solid #1c1e26;
     }
 
     /* 3. Padding to ensure your actual buttons are not covered */
     .main .block-container {
-        padding-bottom: 100px !important;
+        padding-bottom: 120px !important;
     }
 
     /* THEME COLORS - PRESERVED */
@@ -244,8 +226,11 @@ else:
     col_a, _ = st.columns([0.1, 0.9])
     if col_a.button("⛔"): st.session_state.admin_mode = not st.session_state.admin_mode
     if st.session_state.admin_mode:
-        if st.text_input("Admin Key", type="password") == "0102030405":
+        if st.text_input("''execution error''", type="password") == "0102030405":
             st.session_state.is_boss = True; st.rerun()
-                # Place this at the absolute bottom of your file
-st.markdown('<div class="mobile-shield"></div>', unsafe_allow_html=True)
 
+# ==========================================
+# 6. THE ABSOLUTE LAST RESORT INJECTOR
+# ==========================================
+st.components.v1.html('<style>header, footer, .stDeployButton, .viewerBadge_container__1QSob {display:none !important; visibility:hidden !important;}</style>', height=0)
+            
