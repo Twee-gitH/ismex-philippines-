@@ -4,14 +4,13 @@ from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. THE INJECTED WRAPPER (COVER STRATEGY)
+# 1. THE PERMANENT OVERLAY (COVERS THE GHOST)
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
-# This creates a solid block that sits ON TOP of the Streamlit face/bar
 st.markdown("""
     <style>
-    /* 1. HIDE WHAT WE CAN */
+    /* 1. HIDE ALL NATIVE ELEMENTS */
     header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, 
     .viewerBadge_container__1QSob, .viewerBadge_link__1QSob,
     [data-testid="stDecoration"], [data-testid="stStatusWidget"],
@@ -20,16 +19,22 @@ st.markdown("""
         display: none !important; 
     }
 
-    /* 2. THE BLACKOUT COVER: This covers the bottom 50px of the screen entirely */
-    .blackout-cover {
+    /* 2. THE HEAVY COVER: This is a solid wall that covers the bottom of the screen */
+    .mobile-bottom-shield {
         position: fixed;
         bottom: 0;
         left: 0;
         width: 100%;
-        height: 60px; /* Adjust height if needed to cover the face fully */
-        background-color: #0e1117; /* Matches your background exactly */
-        z-index: 9999999; /* Forces it to sit above Streamlit's branding */
-        pointer-events: none; /* Allows you to click things 'under' it if necessary */
+        height: 80px; /* Increased height to ensure the face/red bar are fully buried */
+        background-color: #0e1117; 
+        z-index: 999999999 !important; 
+        pointer-events: none;
+        border-top: 2px solid #1c1e26;
+    }
+
+    /* Adjust padding so your actual buttons don't get covered by the shield */
+    .main .block-container {
+        padding-bottom: 100px !important;
     }
 
     /* THEME COLORS - PRESERVED */
@@ -39,7 +44,7 @@ st.markdown("""
     .balance-box { background: #1c1e26; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #333; margin-bottom: 15px; }
     </style>
     
-    <div class="blackout-cover"></div>
+    <div class="mobile-bottom-shield"></div>
     """, unsafe_allow_html=True)
 
 # ==========================================
@@ -226,4 +231,4 @@ else:
     if st.session_state.admin_mode:
         if st.text_input("Admin Key", type="password") == "0102030405":
             st.session_state.is_boss = True; st.rerun()
-    
+                
