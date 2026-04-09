@@ -4,51 +4,33 @@ from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. THE VIEWPORT SHIELD (COVER STRATEGY)
+# 1. PAGE CONFIG & THEME
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. HIDE ALL NATIVE ELEMENTS */
+    /* HIDE NATIVE ELEMENTS */
     header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, 
     .viewerBadge_container__1QSob, .viewerBadge_link__1QSob,
-    [data-testid="stDecoration"], [data-testid="stStatusWidget"],
-    div[class^="viewerBadge"] { 
+    [data-testid="stDecoration"], [data-testid="stStatusWidget"] { 
         visibility: hidden !important; 
         display: none !important; 
     }
 
-    /* 2. THE SHIELD: A solid black wall over the bottom-right corner area */
-    .mobile-shield {
-        position: fixed;
-        bottom: 0;
-        right: 0;
-        width: 100%;
-        height: 100px; 
-        background-color: #0e1117; 
-        z-index: 2147483647 !important; 
-        pointer-events: none;
-        border-top: 1px solid #1c1e26;
-    }
-
-    /* 3. Padding to ensure your actual buttons are not covered */
-    .main .block-container {
-        padding-bottom: 120px !important;
-    }
-
-    /* THEME COLORS - PRESERVED */
+    /* THEME COLORS */
     .stApp { background-color: #0e1117 !important; color: white !important; }
     div.stButton > button { background-color: #1c1e26 !important; color: #ffffff !important; border: 2px solid #333 !important; border-radius: 8px !important; width: 100% !important; }
     .hist-card { background: #1c1e26; padding: 15px; border-radius: 5px; margin-bottom: 8px; border-left: 5px solid #00ff88; }
     .balance-box { background: #1c1e26; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #333; margin-bottom: 15px; }
-    </style>
     
-    <div class="mobile-shield"></div>
+    /* PADDING FOR BOTTOM AREA */
+    .main .block-container { padding-bottom: 100px !important; }
+    </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. DATABASE CONNECTION (PRESERVED)
+# 2. DATABASE CONNECTION
 # ==========================================
 try:
     if "firebase" in st.secrets:
@@ -226,11 +208,17 @@ else:
     col_a, _ = st.columns([0.1, 0.9])
     if col_a.button("⛔"): st.session_state.admin_mode = not st.session_state.admin_mode
     if st.session_state.admin_mode:
-        if st.text_input("''execution error''", type="password") == "0102030405":
+        if st.text_input("Admin Key", type="password") == "0102030405":
             st.session_state.is_boss = True; st.rerun()
 
 # ==========================================
-# 6. THE ABSOLUTE LAST RESORT INJECTOR
+# 6. THE SURGICAL INJECTOR (HIDDEN)
 # ==========================================
-st.components.v1.html('<style>header, footer, .stDeployButton, .viewerBadge_container__1QSob {display:none !important; visibility:hidden !important;}</style>', height=0)
-            
+st.components.v1.html("""
+    <style>
+    header, footer, .stDeployButton, [class*="viewerBadge"] { 
+        display: none !important; 
+        visibility: hidden !important; 
+    }
+    </style>
+    """, height=0)
