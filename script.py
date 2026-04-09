@@ -33,7 +33,7 @@ if 'admin_mode' not in st.session_state: st.session_state.admin_mode = False
 if 'action_type' not in st.session_state: st.session_state.action_type = None
 
 # ==========================================
-# BLOCK 2: UI STYLES & ABSOLUTE LOCKDOWN
+# BLOCK 2: UI STYLES
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
@@ -180,38 +180,32 @@ elif st.session_state.user:
             progress = min(1.0, elapsed / total_seconds)
             total_roi = a['amount'] * 1.20
             live_profit = (a['amount'] * 0.20) * progress
-            unlock_str = unlock_dt.strftime("%b %d, %Y at %I:%M %p")
+            unlock_str = unlock_dt.strftime("%b %d, %Y")
             
             st.markdown(f"""
                 <div class='hist-card'>
                     <span class='roi-text'>ROI: ₱{total_roi:,.2f}</span>
                     <b>CAPITAL: ₱{a['amount']:,.2f}</b><br>
-                    <div class='live-profit'>
-                        LIVE PROFIT: ₱{live_profit:,.2f}<br>
-                        📅 UNLOCKS: {unlock_str}
-                    </div>
+                    <div class='live-profit'>LIVE PROFIT: ₱{live_profit:,.2f}<br>📅 UNLOCKS: {unlock_str}</div>
                 </div>
             """, unsafe_allow_html=True)
             st.progress(progress)
             is_locked = now < unlock_dt
-            btn_label = f"📥 PULL OUT ₱{total_roi:,.2f}" if not is_locked else "🔒 LOCKED"
-            if st.button(btn_label, key=f"p_{idx}", disabled=is_locked):
-                data['wallet'] = current_wallet + total_roi
-                data.setdefault('history', []).append({"type": "PULL_OUT", "amount": total_roi, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "CONFIRMED"})
-                active.pop(idx)
-                update_user(st.session_state.user, data); st.rerun()
+            if not is_locked:
+                if st.button(f"📥 PULL OUT ₱{total_roi:,.2f}", key=f"p_{idx}"):
+                    data['wallet'] = current_wallet + total_roi
+                    data.setdefault('history', []).append({"type": "PULL_OUT", "amount": total_roi, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": "CONFIRMED"})
+                    active.pop(idx); update_user(st.session_state.user, data); st.rerun()
 
     st.divider()
     st.markdown("### 🤝 REFERRAL PROGRAM")
     st.code(f"https://ismex-philippines.streamlit.app/?ref={user_display.replace(' ', '+')}", language="text")
 
     comms = data.get('commissions', [])
-    if comms:
-        for idx, c in enumerate(comms):
-            st.write(f"👤 {c['referee']} | ₱{c['amt']:,.2f} | **{c['status']}**")
-            if c['status'] == "UNCLAIMED" and st.button(f"CLAIM ₱{c['amt']}", key=f"c_{idx}"):
-                data.setdefault('pending_actions', []).append({"type": "COMMISSION_REQUEST", "amount": c['amt'], "comm_index": idx})
-                update_user(st.session_state.user, data); st.rerun()
+    for idx, c in enumerate(comms):
+        if c['status'] == "UNCLAIMED" and st.button(f"CLAIM ₱{c['amt']} from {c['referee']}", key=f"c_{idx}"):
+            data.setdefault('pending_actions', []).append({"type": "COMMISSION_REQUEST", "amount": c['amt'], "comm_index": idx})
+            update_user(st.session_state.user, data); st.rerun()
 
     st.markdown("### 📜 TRANSACTION HISTORY")
     for h in reversed(data.get('history', [])):
@@ -238,9 +232,7 @@ elif st.session_state.page == "login":
         rn = st.text_input("REFERRAL NAME", value=current_ref).upper().strip()
         if st.button("REGISTER"):
             reg = load_registry()
-            if fn in reg:
-                st.error("ACCESS DENIED: Name already exists.")
-            elif fn and len(p1) == 6:
+            if fn and len(p1) == 6:
                 user_data = {"pin": p1, "wallet": 0.0, "inv": [], "full_name": fn, "referral": rn, "pending_actions": [], "history": [], "commissions": [], "has_deposited": False}
                 update_user(fn, user_data); st.success("Registered! Login now.")
 else:
@@ -253,4 +245,3 @@ else:
     if st.session_state.admin_mode:
         if st.text_input("error execution", type="password") == "0102030405": 
             st.session_state.is_boss = True; st.rerun()
-                
