@@ -10,22 +10,17 @@ st.set_page_config(page_title="ISMEX Official", layout="wide")
 
 st.markdown("""
     <style>
-    /* HIDE NATIVE ELEMENTS */
     header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, 
     .viewerBadge_container__1QSob, .viewerBadge_link__1QSob,
     [data-testid="stDecoration"], [data-testid="stStatusWidget"] { 
         visibility: hidden !important; 
         display: none !important; 
     }
-
-    /* THEME COLORS */
     .stApp { background-color: #0e1117 !important; color: white !important; }
     div.stButton > button { background-color: #1c1e26 !important; color: #ffffff !important; border: 2px solid #333 !important; border-radius: 8px !important; width: 100% !important; }
     .hist-card { background: #1c1e26; padding: 15px; border-radius: 5px; margin-bottom: 8px; border-left: 5px solid #00ff88; }
     .balance-box { background: #1c1e26; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #333; margin-bottom: 15px; }
-    
-    /* PADDING FOR BOTTOM AREA */
-    .main .block-container { padding-bottom: 100px !important; }
+    .main .block-container { padding-bottom: 60px !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -74,6 +69,7 @@ if st.session_state.is_boss:
         pending = u_data.get('pending_actions', [])
         for idx, act in enumerate(list(pending)):
             with st.expander(f"{act['type']} - {user} - ₱{act.get('amount',0):,.2f}"):
+                if 'bank_details' in act: st.write(f"🏦 {act['bank_details']}")
                 c1, c2 = st.columns(2)
                 if c1.button("✅ APPROVE", key=f"a_{user}_{idx}"):
                     if act['type'] in ["DEPOSIT", "REINVEST"]:
@@ -106,26 +102,38 @@ elif st.session_state.user:
     if col2.button("📤 WITHDRAW"): st.session_state.action_type = "WIT"
     if col3.button("🔄 REINVEST"): st.session_state.action_type = "REI"
 
+    # DEPOSIT WITH RECEIPT
     if st.session_state.action_type == "DEP":
         with st.form("dep_f"):
             amt = st.number_input("Deposit Amount", min_value=500.0)
+            receipt = st.file_uploader("Browse Receipt", type=['jpg', 'png', 'jpeg'])
             if st.form_submit_button("SEND TO ADMIN"):
-                data.setdefault('pending_actions', []).append({"type": "DEPOSIT", "amount": amt, "request_id": req_id})
-                data.setdefault('history', []).append({"type": "DEPOSIT", "amount": amt, "date": now_str, "status": "PENDING", "request_id": req_id})
-                update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
+                if receipt:
+                    data.setdefault('pending_actions', []).append({"type": "DEPOSIT", "amount": amt, "request_id": req_id})
+                    data.setdefault('history', []).append({"type": "DEPOSIT", "amount": amt, "date": now_str, "status": "PENDING", "request_id": req_id})
+                    update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
+                else: st.warning("Please upload receipt first")
     
+    # WITHDRAWAL WITH BANK DETAILS
     if st.session_state.action_type == "WIT":
         with st.form("wit_f"):
             amt = st.number_input("Withdraw Amount", min_value=500.0, max_value=wallet)
+            bank = st.text_input("Bank Name").upper()
+            acc_name = st.text_input("Account Name").upper()
+            acc_num = st.text_input("Account Number")
             if st.form_submit_button("REQUEST WITHDRAW"):
-                data['wallet'] -= amt
-                data.setdefault('pending_actions', []).append({"type": "WITHDRAW", "amount": amt, "request_id": req_id})
-                data.setdefault('history', []).append({"type": "WITHDRAW", "amount": amt, "date": now_str, "status": "PENDING", "request_id": req_id})
-                update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
+                if bank and acc_name and acc_num:
+                    data['wallet'] -= amt
+                    details = f"{bank} | {acc_name} | {acc_num}"
+                    data.setdefault('pending_actions', []).append({"type": "WITHDRAW", "amount": amt, "request_id": req_id, "bank_details": details})
+                    data.setdefault('history', []).append({"type": "WITHDRAW", "amount": amt, "date": now_str, "status": "PENDING", "request_id": req_id})
+                    update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
+                else: st.error("Fill all bank details!")
 
+    # REINVEST WITH ANY AMOUNT
     if st.session_state.action_type == "REI":
         with st.form("rei_f"):
-            amt = st.number_input("Reinvest Amount", min_value=500.0, max_value=wallet)
+            amt = st.number_input("Reinvest Amount (Minimum ₱500)", min_value=500.0, max_value=wallet)
             if st.form_submit_button("CONFIRM REINVEST"):
                 data['wallet'] -= amt
                 data.setdefault('pending_actions', []).append({"type": "REINVEST", "amount": amt, "request_id": req_id})
@@ -211,14 +219,13 @@ else:
         if st.text_input("Admin Key", type="password") == "0102030405":
             st.session_state.is_boss = True; st.rerun()
 
-# ==========================================
-# 6. THE SURGICAL INJECTOR (HIDDEN)
-# ==========================================
 st.components.v1.html("""
     <style>
     header, footer, .stDeployButton, [class*="viewerBadge"] { 
         display: none !important; 
         visibility: hidden !important; 
+        pointer-events: none !important;
     }
     </style>
     """, height=0)
+    
