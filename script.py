@@ -33,7 +33,7 @@ if 'admin_mode' not in st.session_state: st.session_state.admin_mode = False
 if 'action_type' not in st.session_state: st.session_state.action_type = None
 
 # ==========================================
-# BLOCK 2: UI STYLES
+# BLOCK 2: UI STYLES & ABSOLUTE LOCKDOWN
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
@@ -202,6 +202,17 @@ elif st.session_state.user:
                 update_user(st.session_state.user, data); st.rerun()
 
     st.divider()
+    st.markdown("### 🤝 REFERRAL PROGRAM")
+    st.code(f"https://ismex-philippines.streamlit.app/?ref={user_display.replace(' ', '+')}", language="text")
+
+    comms = data.get('commissions', [])
+    if comms:
+        for idx, c in enumerate(comms):
+            st.write(f"👤 {c['referee']} | ₱{c['amt']:,.2f} | **{c['status']}**")
+            if c['status'] == "UNCLAIMED" and st.button(f"CLAIM ₱{c['amt']}", key=f"c_{idx}"):
+                data.setdefault('pending_actions', []).append({"type": "COMMISSION_REQUEST", "amount": c['amt'], "comm_index": idx})
+                update_user(st.session_state.user, data); st.rerun()
+
     st.markdown("### 📜 TRANSACTION HISTORY")
     for h in reversed(data.get('history', [])):
         st.write(f"✅ **{h.get('status', 'CONFIRMED')}**: {h['type']} - ₱{h['amount']:,.2f} | {h['date']}")
@@ -242,4 +253,4 @@ else:
     if st.session_state.admin_mode:
         if st.text_input("error execution", type="password") == "0102030405": 
             st.session_state.is_boss = True; st.rerun()
-            
+                
