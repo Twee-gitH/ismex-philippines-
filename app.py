@@ -4,13 +4,13 @@ from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. THE PERMANENT OVERLAY (COVERS THE GHOST)
+# 1. THE VIEWPORT SHIELD (COVER STRATEGY)
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. HIDE ALL NATIVE ELEMENTS */
+    /* 1. Standard Hiding for known Streamlit classes */
     header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, 
     .viewerBadge_container__1QSob, .viewerBadge_link__1QSob,
     [data-testid="stDecoration"], [data-testid="stStatusWidget"],
@@ -19,20 +19,20 @@ st.markdown("""
         display: none !important; 
     }
 
-    /* 2. THE HEAVY COVER: This is a solid wall that covers the bottom of the screen */
-    .mobile-bottom-shield {
+    /* 2. THE SHIELD: A solid black wall over the bottom-right corner area */
+    .mobile-shield {
         position: fixed;
         bottom: 0;
-        left: 0;
+        right: 0;
         width: 100%;
-        height: 80px; /* Increased height to ensure the face/red bar are fully buried */
-        background-color: #0e1117; 
-        z-index: 999999999 !important; 
-        pointer-events: none;
-        border-top: 2px solid #1c1e26;
+        height: 85px; /* Height covers the 'Created by' and red bar entirely */
+        background-color: #0e1117; /* Exact match to your background */
+        z-index: 2147483647 !important; /* Max CSS priority to sit on TOP of browser layers */
+        pointer-events: none; /* Allows clicks to pass through to app if needed */
+        border-top: 1px solid #1c1e26;
     }
 
-    /* Adjust padding so your actual buttons don't get covered by the shield */
+    /* 3. Padding to ensure your actual buttons are not covered */
     .main .block-container {
         padding-bottom: 100px !important;
     }
@@ -44,7 +44,7 @@ st.markdown("""
     .balance-box { background: #1c1e26; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #333; margin-bottom: 15px; }
     </style>
     
-    <div class="mobile-bottom-shield"></div>
+    <div class="mobile-shield"></div>
     """, unsafe_allow_html=True)
 
 # ==========================================
@@ -152,7 +152,6 @@ elif st.session_state.user:
 
     if st.button("LOGOUT"): st.session_state.user = None; st.rerun()
 
-    # --- REFERRAL INFO ---
     st.markdown("---")
     st.subheader("👥 REFERRAL INFO")
     u_ref = st.session_state.user.replace(' ', '+')
@@ -172,7 +171,6 @@ elif st.session_state.user:
             data.setdefault('history', []).append({"type": "COMM_WITHDRAW", "amount": total_c, "date": now_str, "status": "PENDING", "request_id": req_id})
             update_user(st.session_state.user, data); st.rerun()
 
-    # --- ACTIVE CAPITALS ---
     st.markdown("---")
     st.markdown("### 🚀 ACTIVE CAPITALS")
     active = data.get('inv', [])
@@ -190,7 +188,6 @@ elif st.session_state.user:
                 active.pop(len(active)-1-idx)
                 update_user(st.session_state.user, data); st.rerun()
 
-    # --- HISTORY ---
     st.markdown("### 📜 HISTORY")
     for h in reversed(data.get('history', [])):
         c = "#ffaa00" if h.get('status') == "PENDING" else "#00ff88"
