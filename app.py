@@ -4,24 +4,44 @@ from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. PAGE CONFIG & THEME
+# 1. PAGE CONFIG & THE ANTI-BRANDING SHIELD
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
 st.markdown("""
     <style>
+    /* 1. HIDE NATIVE ELEMENTS */
     header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, 
     .viewerBadge_container__1QSob, .viewerBadge_link__1QSob,
     [data-testid="stDecoration"], [data-testid="stStatusWidget"] { 
         visibility: hidden !important; 
         display: none !important; 
     }
+
+    /* 2. THE TOP-LAYER SHIELD (THE "COVER") */
+    /* This creates a physical black bar at the very bottom that sits ABOVE the Streamlit icon */
+    .mobile-shield {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 50px;
+        background-color: #0e1117; /* Matches your background color */
+        z-index: 9999999; /* Higher than everything else */
+        pointer-events: auto; /* Blocks clicks to the icons underneath */
+    }
+
+    /* 3. THEME COLORS */
     .stApp { background-color: #0e1117 !important; color: white !important; }
     div.stButton > button { background-color: #1c1e26 !important; color: #ffffff !important; border: 2px solid #333 !important; border-radius: 8px !important; width: 100% !important; }
     .hist-card { background: #1c1e26; padding: 15px; border-radius: 5px; margin-bottom: 8px; border-left: 5px solid #00ff88; }
     .balance-box { background: #1c1e26; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #333; margin-bottom: 15px; }
-    .main .block-container { padding-bottom: 60px !important; }
+    
+    /* Extra padding so your buttons aren't covered by the shield */
+    .main .block-container { padding-bottom: 100px !important; }
     </style>
+    
+    <div class="mobile-shield"></div>
     """, unsafe_allow_html=True)
 
 # ==========================================
@@ -72,7 +92,6 @@ if st.session_state.is_boss:
                 if 'bank_details' in act: st.write(f"🏦 {act['bank_details']}")
                 c1, c2 = st.columns(2)
                 if c1.button("✅ APPROVE", key=f"a_{user}_{idx}"):
-                    # FIX: Use PH Time for Admin Approval
                     ph_now = datetime.now() + timedelta(hours=8)
                     if act['type'] in ["DEPOSIT", "REINVEST"]:
                         u_data.setdefault('inv', []).append({"amount": act['amount'], "start_time": ph_now.isoformat()})
@@ -94,7 +113,6 @@ elif st.session_state.user:
     data = reg.get(st.session_state.user, {})
     wallet = data.get('wallet', 0.0)
     
-    # FIX: Define Philippine Time for all user actions
     ph_now = datetime.now() + timedelta(hours=8)
     now_str = ph_now.strftime("%Y-%m-%d %I:%M %p")
     req_id = ph_now.strftime("%f")
@@ -169,7 +187,6 @@ elif st.session_state.user:
     for idx, a in enumerate(reversed(active)):
         start = datetime.fromisoformat(a['start_time'])
         end = start + timedelta(days=7)
-        # FIX: Ensure progress is calculated using PH time
         prog = min(1.0, (ph_now - start).total_seconds() / (7*86400))
         roi = a['amount'] * 1.20
         st.markdown(f"<div class='hist-card'><span style='color:#00ff88; float:right;'>ROI: ₱{roi:,.2f}</span>CAPITAL: ₱{a['amount']:,.2f}</div>", unsafe_allow_html=True)
@@ -222,13 +239,14 @@ else:
         if st.text_input("Admin Key", type="password") == "0102030405":
             st.session_state.is_boss = True; st.rerun()
 
+# This part ensures the branding is hidden by forcing it at the bottom-most level
 st.components.v1.html("""
-    <style>
-    header, footer, .stDeployButton, [class*="viewerBadge"] { 
-        display: none !important; 
-        visibility: hidden !important; 
-        pointer-events: none !important;
-    }
-    </style>
+    <script>
+    const hideElements = () => {
+        const elements = window.parent.document.querySelectorAll('footer, .stDeployButton, header');
+        elements.forEach(el => el.style.display = 'none');
+    };
+    setInterval(hideElements, 100);
+    </script>
     """, height=0)
                 
