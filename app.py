@@ -144,56 +144,84 @@ if st.session_state.is_boss:
                     if act['type'] == "WITHDRAW": u_data['wallet'] = u_data.get('wallet', 0.0) + act['amount']
                     u_data['pending_actions'].pop(idx); update_user(user, u_data); st.rerun()
 
-# 4. USER DASHBOARD (FULL RESTORE)
-elif st.session_state.user:
-    reg = load_registry()
-    data = reg.get(st.session_state.user, {})
-    wallet = float(data.get('wallet', 0.0))
-    user_display = st.session_state.user.upper()
+# ==========================================
+# 4. THE "PRESS HERE" LANDING & AUTH SYSTEM
+# ==========================================
 
-    st.write(f"Investor: **{user_display}**")
-    if st.button("LOGOUT"): st.session_state.user = None; st.rerun()
+# 1. Capture the Referral IMMEDIATELY (Keep this at the top of this block)
+if "ref" in st.query_params:
+    st.session_state["captured_ref"] = st.query_params["ref"].replace("+", " ").upper().strip()
 
-    st.markdown(f'<div class="balance-box"><p style="color:#8c8f99;">WITHDRAWABLE</p><h1 style="color:#00ff88;">₱{wallet:,.2f}</h1></div>', unsafe_allow_html=True)
+# 2. Logic to switch between the "Press Here" page and the actual Login/Register forms
+if st.session_state.user:
+    # This is where your existing Dashboard code starts
+    pass 
 
-    col1, col2, col3 = st.columns(3)
-    if col1.button("📥 DEPOSIT"): st.session_state.action_type = "DEP"
-    if col2.button("💸 WITHDRAW"): st.session_state.action_type = "WITH"
-    if col3.button("♻️ REINVEST"): st.session_state.action_type = "REIN"
+elif st.session_state.page == "auth":
+    # The actual Login and Register Tabs
+    st.markdown("### ACCOUNT ACCESS")
+    tab1, tab2 = st.tabs(["LOGIN", "REGISTER"])
+    
+    with tab1:
+        u_log = st.text_input("FULL NAME", key="l_u").upper().strip()
+        p_log = st.text_input("PIN", type="password", key="l_p")
+        if st.button("ENTER ISMEX"):
+            reg = load_registry()
+            if u_log in reg and str(reg[u_log]['pin']) == str(p_log):
+                st.session_state.user = u_log
+                st.rerun()
+            else:
+                st.error("Invalid Name or PIN")
 
-    # --- ACTION FORMS ---
-    if st.session_state.action_type == "DEP":
-        with st.form("dep_form"):
-            st.markdown("### 📥 DEPOSIT REQUEST")
-            st.info("💳 **GCASH:** 09XXXXXXXX | **NAME:** T*** S*** T.")
-            amt_d = st.number_input("Amount (Min: ₱500)", min_value=500.0)
-            st.file_uploader("Browse Receipt", type=['jpg', 'jpeg', 'png'])
-            if st.form_submit_button("SEND TO ADMIN"):
-                data.setdefault('pending_actions', []).append({"type": "DEPOSIT", "amount": amt_d, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
-                update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
+    with tab2:
+        # Shows the friend's name caught from the referral link
+        inviter = st.session_state.get('captured_ref', 'OFFICIAL')
+        st.info(f"🤝 Invited by: {inviter}")
+        
+        new_u = st.text_input("YOUR FULL NAME (FIRST MIDDLE LAST)").upper().strip()
+        new_p = st.text_input("SET 4-DIGIT PIN", type="password", max_chars=4)
+        
+        if st.button("CREATE ACCOUNT"):
+            reg = load_registry()
+            # STRICT RULE: Block duplicate names
+            if new_u in reg:
+                st.error("SYSTEM ERROR: THIS NAME IS ALREADY AN INVESTOR!")
+            elif len(new_u) < 5:
+                st.warning("Please enter your complete full name.")
+            elif not new_p:
+                st.warning("Please set a PIN.")
+            else:
+                # Add new user to Firestore
+                update_user(new_u, {
+                    "pin": new_p,
+                    "wallet": 0.0,
+                    "ref_by": inviter,
+                    "inv": [],
+                    "history": [],
+                    "pending_actions": []
+                })
+                st.success("Registration Successful! Please switch to the LOGIN tab.")
+    
+    if st.button("← BACK TO HOME"):
+        st.session_state.page = "landing"
+        st.rerun()
 
-    if st.session_state.action_type == "WITH":
-        with st.form("with_form"):
-            st.markdown("### 💸 WITHDRAWAL")
-            amt_w = st.number_input("Amount", 0.0, max_value=wallet)
-            bnk = st.text_input("Bank / Gcash")
-            acc = st.text_input("Account Number")
-            if st.form_submit_button("SUBMIT REQUEST"):
-                if amt_w > 0:
-                    data['wallet'] = wallet - amt_w
-                    data.setdefault('pending_actions', []).append({"type":"WITHDRAW", "amount":amt_w, "bank":bnk, "acct_num":acc})
-                    update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
-
-    if st.session_state.action_type == "REIN":
-        with st.form("rein_form"):
-            st.markdown("### ♻️ REINVEST")
-            amt_r = st.number_input("Reinvest Amount", 0.0, max_value=wallet)
-            if st.form_submit_button("CONFIRM REINVEST"):
-                if amt_r > 0:
-                    data['wallet'] = wallet - amt_r
-                    data.setdefault('inv', []).append({"amount": amt_r, "start_time": datetime.now().isoformat()})
-                    update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
-
+else:
+    # THE MAIN LANDING SCREEN (WRAPPED UI)
+    st.title("ISMEX PHILIPPINES 📊")
+    st.write("International Stock Market Exchange")
+    
+    # Your specific "Press Here" button
+    if st.button("🚀 PRESS HERE TO REGISTER OR LOG IN", use_container_width=True):
+        st.session_state.page = "auth"
+        st.rerun()
+    
+    # Hidden Admin Entry (Optional)
+    with st.expander(" "):
+        if st.text_input("Key", type="password") == "0102030405":
+            st.session_state.is_boss = True
+            st.rerun()
+            
     # --- INVESTMENTS & REFERRALS ---
     st.markdown("### 🤝 YOUR REFERRAL LINK")
     st.code(f"https://ismex-philippines.streamlit.app/?ref={user_display.replace(' ', '+')}")
