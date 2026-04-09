@@ -4,7 +4,32 @@ from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. DATABASE CONNECTION
+# 1. THE INJECTED WRAPPER (FOR GITHUB DEPLOY)
+# ==========================================
+st.set_page_config(page_title="ISMEX Official", layout="wide")
+
+# This is the original block that works with your GitHub custom display size
+st.markdown("""
+    <style>
+    /* Injected logic to hide Streamlit branding for GitHub/Iframe display */
+    header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, 
+    .viewerBadge_container__1QSob, .viewerBadge_link__1QSob,
+    [data-testid="stDecoration"], [data-testid="stStatusWidget"] { 
+        visibility: hidden !important; 
+        display: none !important; 
+    }
+    div[class^="viewerBadge"] { display: none !important; }
+    
+    /* Preserve your custom minimalist look */
+    .stApp { background-color: #0e1117 !important; color: white !important; }
+    div.stButton > button { background-color: #1c1e26 !important; color: #ffffff !important; border: 2px solid #333 !important; border-radius: 8px !important; width: 100% !important; }
+    .hist-card { background: #1c1e26; padding: 15px; border-radius: 5px; margin-bottom: 8px; border-left: 5px solid #00ff88; }
+    .balance-box { background: #1c1e26; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #333; margin-bottom: 15px; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# ==========================================
+# 2. DATABASE CONNECTION
 # ==========================================
 try:
     if "firebase" in st.secrets:
@@ -33,30 +58,6 @@ def update_user(name, data):
 # State initialization
 for key, val in [('page','landing'), ('user',None), ('is_boss',False), ('admin_mode',False), ('action_type',None)]:
     if key not in st.session_state: st.session_state[key] = val
-
-# ==========================================
-# 2. UI STYLES (THE INVISIBLE WRAPPER)
-# ==========================================
-st.set_page_config(page_title="ISMEX Official", layout="wide")
-st.markdown("""
-    <style>
-    /* STRENGTHENED HIDING LOGIC */
-    header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, .viewerBadge_container__1QSob { 
-        visibility: hidden !important; 
-        display: none !important; 
-    }
-    
-    /* REMOVES THE RED BAR AT THE BOTTOM ON MOBILE */
-    [data-testid="stDecoration"] { display: none !important; }
-    iframe { visibility: hidden !important; }
-    
-    .stApp { background-color: #0e1117 !important; color: white !important; }
-    div.stButton > button { background-color: #1c1e26 !important; color: #ffffff !important; border: 2px solid #333 !important; border-radius: 8px !important; width: 100% !important; }
-    .hist-card { background: #1c1e26; padding: 15px; border-radius: 5px; margin-bottom: 8px; border-left: 5px solid #00ff88; }
-    .roi-text { color: #00ff88; font-weight: bold; float: right; font-size: 18px; }
-    .balance-box { background: #1c1e26; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #333; margin-bottom: 15px; }
-    </style>
-    """, unsafe_allow_html=True)
 
 if "ref" in st.query_params:
     st.session_state["captured_ref"] = st.query_params["ref"].replace("+", " ").upper().strip()
@@ -132,13 +133,12 @@ elif st.session_state.user:
 
     if st.button("LOGOUT"): st.session_state.user = None; st.rerun()
 
-    # --- REFERRAL INFO (Only shows after login) ---
+    # --- REFERRAL INFO ---
     st.markdown("---")
-    st.subheader("👥 YOUR REFERRAL LINK")
+    st.subheader("👥 REFERRAL INFO")
     u_ref = st.session_state.user.replace(' ', '+')
-    ref_link = f"https://ismex-philippines-internationalstockmarketexchange.streamlit.app/?ref={u_ref}"
-    st.code(ref_link)
-    
+    ref_url = f"https://ismex-philippines-internationalstockmarketexchange.streamlit.app/?ref={u_ref}"
+    st.code(ref_url)
     ref_list, total_c = [], 0
     for n, i in reg.items():
         if i.get('ref_by') == st.session_state.user:
@@ -162,7 +162,7 @@ elif st.session_state.user:
         end = start + timedelta(days=7)
         prog = min(1.0, (datetime.now() - start).total_seconds() / (7*86400))
         roi = a['amount'] * 1.20
-        st.markdown(f"<div class='hist-card'><span class='roi-text'>ROI: ₱{roi:,.2f}</span>CAPITAL: ₱{a['amount']:,.2f}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='hist-card'><span style='color:#00ff88; float:right;'>ROI: ₱{roi:,.2f}</span>CAPITAL: ₱{a['amount']:,.2f}</div>", unsafe_allow_html=True)
         st.progress(prog)
         if datetime.now() >= end:
             if st.button(f"📥 PULL OUT ₱{roi:,.2f}", key=f"po_{idx}"):
@@ -172,7 +172,7 @@ elif st.session_state.user:
                 update_user(st.session_state.user, data); st.rerun()
 
     # --- HISTORY ---
-    st.markdown("### 📜 TRANSACTION HISTORY")
+    st.markdown("### 📜 HISTORY")
     for h in reversed(data.get('history', [])):
         c = "#ffaa00" if h.get('status') == "PENDING" else "#00ff88"
         st.markdown(f"**{h.get('type')}** | ₱{h.get('amount',0):,.2f} | {h.get('date')} | <span style='color:{c}'>{h.get('status')}</span>", unsafe_allow_html=True)
@@ -212,4 +212,4 @@ else:
     if st.session_state.admin_mode:
         if st.text_input("Admin Key", type="password") == "0102030405":
             st.session_state.is_boss = True; st.rerun()
-    
+            
