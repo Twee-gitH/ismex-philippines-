@@ -72,8 +72,10 @@ if st.session_state.is_boss:
                 if 'bank_details' in act: st.write(f"🏦 {act['bank_details']}")
                 c1, c2 = st.columns(2)
                 if c1.button("✅ APPROVE", key=f"a_{user}_{idx}"):
+                    # FIX: Use PH Time for Admin Approval
+                    ph_now = datetime.now() + timedelta(hours=8)
                     if act['type'] in ["DEPOSIT", "REINVEST"]:
-                        u_data.setdefault('inv', []).append({"amount": act['amount'], "start_time": datetime.now().isoformat()})
+                        u_data.setdefault('inv', []).append({"amount": act['amount'], "start_time": ph_now.isoformat()})
                     for h in u_data.get('history', []):
                         if h.get('request_id') == act.get('request_id'): h['status'] = "CONFIRMED"
                     u_data['pending_actions'].pop(idx)
@@ -91,8 +93,11 @@ elif st.session_state.user:
     reg = load_registry()
     data = reg.get(st.session_state.user, {})
     wallet = data.get('wallet', 0.0)
-    now_str = datetime.now().strftime("%Y-%m-%d %I:%M %p")
-    req_id = datetime.now().strftime("%f")
+    
+    # FIX: Define Philippine Time for all user actions
+    ph_now = datetime.now() + timedelta(hours=8)
+    now_str = ph_now.strftime("%Y-%m-%d %I:%M %p")
+    req_id = ph_now.strftime("%f")
 
     st.title(f"WELCOME, {st.session_state.user}")
     st.markdown(f"<div class='balance-box'><h3>AVAILABLE BALANCE</h3><h1>₱{wallet:,.2f}</h1></div>", unsafe_allow_html=True)
@@ -102,7 +107,6 @@ elif st.session_state.user:
     if col2.button("📤 WITHDRAW"): st.session_state.action_type = "WIT"
     if col3.button("🔄 REINVEST"): st.session_state.action_type = "REI"
 
-    # DEPOSIT WITH RECEIPT
     if st.session_state.action_type == "DEP":
         with st.form("dep_f"):
             amt = st.number_input("Deposit Amount", min_value=500.0)
@@ -114,7 +118,6 @@ elif st.session_state.user:
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
                 else: st.warning("Please upload receipt first")
     
-    # WITHDRAWAL WITH BANK DETAILS
     if st.session_state.action_type == "WIT":
         with st.form("wit_f"):
             amt = st.number_input("Withdraw Amount", min_value=500.0, max_value=wallet)
@@ -130,7 +133,6 @@ elif st.session_state.user:
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
                 else: st.error("Fill all bank details!")
 
-    # REINVEST WITH ANY AMOUNT
     if st.session_state.action_type == "REI":
         with st.form("rei_f"):
             amt = st.number_input("Reinvest Amount (Minimum ₱500)", min_value=500.0, max_value=wallet)
@@ -167,11 +169,12 @@ elif st.session_state.user:
     for idx, a in enumerate(reversed(active)):
         start = datetime.fromisoformat(a['start_time'])
         end = start + timedelta(days=7)
-        prog = min(1.0, (datetime.now() - start).total_seconds() / (7*86400))
+        # FIX: Ensure progress is calculated using PH time
+        prog = min(1.0, (ph_now - start).total_seconds() / (7*86400))
         roi = a['amount'] * 1.20
         st.markdown(f"<div class='hist-card'><span style='color:#00ff88; float:right;'>ROI: ₱{roi:,.2f}</span>CAPITAL: ₱{a['amount']:,.2f}</div>", unsafe_allow_html=True)
         st.progress(prog)
-        if datetime.now() >= end:
+        if ph_now >= end:
             if st.button(f"📥 PULL OUT ₱{roi:,.2f}", key=f"po_{idx}"):
                 data['wallet'] = wallet + roi
                 data.setdefault('history', []).append({"type": "PULL OUT", "amount": roi, "date": now_str, "status": "CONFIRMED"})
@@ -228,4 +231,4 @@ st.components.v1.html("""
     }
     </style>
     """, height=0)
-    
+                
