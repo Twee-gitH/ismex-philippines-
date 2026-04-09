@@ -40,7 +40,16 @@ for key, val in [('page','landing'), ('user',None), ('is_boss',False), ('admin_m
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 st.markdown("""
     <style>
-    header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu { visibility: hidden !important; display: none !important; }
+    /* STRENGTHENED HIDING LOGIC */
+    header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, .viewerBadge_container__1QSob { 
+        visibility: hidden !important; 
+        display: none !important; 
+    }
+    
+    /* REMOVES THE RED BAR AT THE BOTTOM ON MOBILE */
+    [data-testid="stDecoration"] { display: none !important; }
+    iframe { visibility: hidden !important; }
+    
     .stApp { background-color: #0e1117 !important; color: white !important; }
     div.stButton > button { background-color: #1c1e26 !important; color: #ffffff !important; border: 2px solid #333 !important; border-radius: 8px !important; width: 100% !important; }
     .hist-card { background: #1c1e26; padding: 15px; border-radius: 5px; margin-bottom: 8px; border-left: 5px solid #00ff88; }
@@ -123,11 +132,13 @@ elif st.session_state.user:
 
     if st.button("LOGOUT"): st.session_state.user = None; st.rerun()
 
-    # --- REFERRAL INFO (30%) ---
+    # --- REFERRAL INFO (Only shows after login) ---
     st.markdown("---")
-    st.subheader("👥 REFERRAL INFO")
-    ref_link = f"https://ismex-philippines-internationalstockmarketexchange.streamlit.app/?ref={st.session_state.user.replace(' ', '+')}"
+    st.subheader("👥 YOUR REFERRAL LINK")
+    u_ref = st.session_state.user.replace(' ', '+')
+    ref_link = f"https://ismex-philippines-internationalstockmarketexchange.streamlit.app/?ref={u_ref}"
     st.code(ref_link)
+    
     ref_list, total_c = [], 0
     for n, i in reg.items():
         if i.get('ref_by') == st.session_state.user:
@@ -160,6 +171,7 @@ elif st.session_state.user:
                 active.pop(len(active)-1-idx)
                 update_user(st.session_state.user, data); st.rerun()
 
+    # --- HISTORY ---
     st.markdown("### 📜 TRANSACTION HISTORY")
     for h in reversed(data.get('history', [])):
         c = "#ffaa00" if h.get('status') == "PENDING" else "#00ff88"
