@@ -4,14 +4,13 @@ from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. THE INJECTED WRAPPER (FOR GITHUB DEPLOY)
+# 1. THE INJECTED WRAPPER (PRESERVED)
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
-# This is the original block that works with your GitHub custom display size
+# Keeping your original CSS injection for the GitHub custom display
 st.markdown("""
     <style>
-    /* Injected logic to hide Streamlit branding for GitHub/Iframe display */
     header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, 
     .viewerBadge_container__1QSob, .viewerBadge_link__1QSob,
     [data-testid="stDecoration"], [data-testid="stStatusWidget"] { 
@@ -20,7 +19,6 @@ st.markdown("""
     }
     div[class^="viewerBadge"] { display: none !important; }
     
-    /* Preserve your custom minimalist look */
     .stApp { background-color: #0e1117 !important; color: white !important; }
     div.stButton > button { background-color: #1c1e26 !important; color: #ffffff !important; border: 2px solid #333 !important; border-radius: 8px !important; width: 100% !important; }
     .hist-card { background: #1c1e26; padding: 15px; border-radius: 5px; margin-bottom: 8px; border-left: 5px solid #00ff88; }
@@ -29,7 +27,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. DATABASE CONNECTION
+# 2. DATABASE CONNECTION (PRESERVED)
 # ==========================================
 try:
     if "firebase" in st.secrets:
@@ -63,7 +61,7 @@ if "ref" in st.query_params:
     st.session_state["captured_ref"] = st.query_params["ref"].replace("+", " ").upper().strip()
 
 # ==========================================
-# 3. ADMIN PANEL
+# 3. ADMIN PANEL (PRESERVED)
 # ==========================================
 if st.session_state.is_boss:
     st.title("👑 ADMIN CONTROL")
@@ -88,7 +86,7 @@ if st.session_state.is_boss:
                     u_data['pending_actions'].pop(idx); update_user(user, u_data); st.rerun()
 
 # ==========================================
-# 4. USER DASHBOARD
+# 4. USER DASHBOARD (WITH ADDED HISTORY)
 # ==========================================
 elif st.session_state.user:
     reg = load_registry()
@@ -105,6 +103,7 @@ elif st.session_state.user:
     if col2.button("📤 WITHDRAW"): st.session_state.action_type = "WIT"
     if col3.button("🔄 REINVEST"): st.session_state.action_type = "REI"
 
+    # --- ACTION FORMS ---
     if st.session_state.action_type == "DEP":
         with st.form("dep_f"):
             amt = st.number_input("Deposit Amount", min_value=500.0)
@@ -133,7 +132,7 @@ elif st.session_state.user:
 
     if st.button("LOGOUT"): st.session_state.user = None; st.rerun()
 
-    # --- REFERRAL INFO ---
+    # --- REFERRAL INFO (PRESERVED) ---
     st.markdown("---")
     st.subheader("👥 REFERRAL INFO")
     u_ref = st.session_state.user.replace(' ', '+')
@@ -153,7 +152,7 @@ elif st.session_state.user:
             data.setdefault('history', []).append({"type": "COMM_WITHDRAW", "amount": total_c, "date": now_str, "status": "PENDING", "request_id": req_id})
             update_user(st.session_state.user, data); st.rerun()
 
-    # --- ACTIVE CAPITALS ---
+    # --- ACTIVE CAPITALS (PRESERVED) ---
     st.markdown("---")
     st.markdown("### 🚀 ACTIVE CAPITALS")
     active = data.get('inv', [])
@@ -171,14 +170,14 @@ elif st.session_state.user:
                 active.pop(len(active)-1-idx)
                 update_user(st.session_state.user, data); st.rerun()
 
-    # --- HISTORY ---
+    # --- HISTORY (ADDED) ---
     st.markdown("### 📜 HISTORY")
     for h in reversed(data.get('history', [])):
         c = "#ffaa00" if h.get('status') == "PENDING" else "#00ff88"
         st.markdown(f"**{h.get('type')}** | ₱{h.get('amount',0):,.2f} | {h.get('date')} | <span style='color:{c}'>{h.get('status')}</span>", unsafe_allow_html=True)
 
 # ==========================================
-# 5. LANDING & AUTH
+# 5. LANDING & AUTH (PRESERVED)
 # ==========================================
 elif st.session_state.page == "auth":
     tab1, tab2 = st.tabs(["LOGIN", "REGISTER"])
