@@ -20,13 +20,12 @@ st.markdown("""
     }
 
     /* 2. THE AGGRESSIVE SHIELD */
-    /* Increased height and forced top-level priority */
     .mobile-shield {
         position: fixed;
         bottom: 0 !important;
         left: 0 !important;
         width: 100vw !important;
-        height: 65px !important; /* Made it taller to cover the new icon positions */
+        height: 65px !important; 
         background-color: #0e1117 !important; 
         z-index: 999999999 !important; 
         border-top: 1px solid #0e1117;
@@ -34,38 +33,16 @@ st.markdown("""
 
     /* 3. THEME & PADDING */
     .stApp { background-color: #0e1117 !important; color: white !important; }
+    div.stButton > button { background-color: #1c1e26 !important; color: #ffffff !important; border: 2px solid #333 !important; border-radius: 8px !important; width: 100% !important; }
+    .hist-card { background: #1c1e26; padding: 15px; border-radius: 5px; margin-bottom: 8px; border-left: 5px solid #00ff88; }
+    .balance-box { background: #1c1e26; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #333; margin-bottom: 15px; }
     
-    /* Ensure your buttons don't get covered by the taller shield */
     .main .block-container { padding-bottom: 120px !important; }
     </style>
     
     <div class="mobile-shield"></div>
     """, unsafe_allow_html=True)
 
-
-    /* 2. THE TOP-LAYER SHIELD (THE "COVER") */
-    .mobile-shield {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 50px;
-        background-color: #0e1117; 
-        z-index: 9999999; 
-        pointer-events: auto; 
-    }
-
-    /* 3. THEME COLORS */
-    .stApp { background-color: #0e1117 !important; color: white !important; }
-    div.stButton > button { background-color: #1c1e26 !important; color: #ffffff !important; border: 2px solid #333 !important; border-radius: 8px !important; width: 100% !important; }
-    .hist-card { background: #1c1e26; padding: 15px; border-radius: 5px; margin-bottom: 8px; border-left: 5px solid #00ff88; }
-    .balance-box { background: #1c1e26; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #333; margin-bottom: 15px; }
-    
-    .main .block-container { padding-bottom: 100px !important; }
-    </style>
-    
-    <div class="mobile-shield"></div>
-    """, unsafe_allow_html=True)
 
 # ==========================================
 # 2. DATABASE CONNECTION
