@@ -19,16 +19,15 @@ st.markdown("""
     }
 
     /* 2. THE TOP-LAYER SHIELD (THE "COVER") */
-    /* This creates a physical black bar at the very bottom that sits ABOVE the Streamlit icon */
     .mobile-shield {
         position: fixed;
         bottom: 0;
         left: 0;
         width: 100%;
         height: 50px;
-        background-color: #0e1117; /* Matches your background color */
-        z-index: 9999999; /* Higher than everything else */
-        pointer-events: auto; /* Blocks clicks to the icons underneath */
+        background-color: #0e1117; 
+        z-index: 9999999; 
+        pointer-events: auto; 
     }
 
     /* 3. THEME COLORS */
@@ -37,7 +36,6 @@ st.markdown("""
     .hist-card { background: #1c1e26; padding: 15px; border-radius: 5px; margin-bottom: 8px; border-left: 5px solid #00ff88; }
     .balance-box { background: #1c1e26; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #333; margin-bottom: 15px; }
     
-    /* Extra padding so your buttons aren't covered by the shield */
     .main .block-container { padding-bottom: 100px !important; }
     </style>
     
@@ -111,7 +109,7 @@ if st.session_state.is_boss:
 elif st.session_state.user:
     reg = load_registry()
     data = reg.get(st.session_state.user, {})
-    wallet = data.get('wallet', 0.0)
+    wallet = float(data.get('wallet', 0.0))
     
     ph_now = datetime.now() + timedelta(hours=8)
     now_str = ph_now.strftime("%Y-%m-%d %I:%M %p")
@@ -125,47 +123,49 @@ elif st.session_state.user:
     if col2.button("📤 WITHDRAW"): st.session_state.action_type = "WIT"
     if col3.button("🔄 REINVEST"): st.session_state.action_type = "REI"
 
-        if st.session_state.action_type == "WIT":
+    if st.session_state.action_type == "DEP":
+        with st.form("dep_f"):
+            amt = st.number_input("Deposit Amount", min_value=500.0)
+            receipt = st.file_uploader("Browse Receipt", type=['jpg', 'png', 'jpeg'])
+            if st.form_submit_button("SEND TO ADMIN"):
+                if receipt:
+                    data.setdefault('pending_actions', []).append({"type": "DEPOSIT", "amount": amt, "request_id": req_id})
+                    data.setdefault('history', []).append({"type": "DEPOSIT", "amount": amt, "date": now_str, "status": "PENDING", "request_id": req_id})
+                    update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
+                else: st.warning("Please upload receipt first")
+    
+    if st.session_state.action_type == "WIT":
         with st.form("wit_f"):
-            # This line must be indented (pushed to the right)
-            safe_max = max(500.0, float(wallet))
-            
+            # FIX: Ensure max_value is never less than min_value
+            safe_max = max(500.0, wallet)
             amt = st.number_input("Withdraw Amount", min_value=500.0, max_value=safe_max)
             bank = st.text_input("Bank Name").upper()
             acc_name = st.text_input("Account Name").upper()
             acc_num = st.text_input("Account Number")
-            
             if st.form_submit_button("REQUEST WITHDRAW"):
                 if wallet < amt:
-                    st.error("Insufficient Balance!")
+                    st.error("INSUFFICIENT BALANCE!")
                 elif bank and acc_name and acc_num:
-                    data['wallet'] -= amt
+                    data['wallet'] = wallet - amt
                     details = f"{bank} | {acc_name} | {acc_num}"
                     data.setdefault('pending_actions', []).append({"type": "WITHDRAW", "amount": amt, "request_id": req_id, "bank_details": details})
                     data.setdefault('history', []).append({"type": "WITHDRAW", "amount": amt, "date": now_str, "status": "PENDING", "request_id": req_id})
-                    update_user(st.session_state.user, data)
-                    st.session_state.action_type = None
-                    st.rerun()
-                else:
-                    st.error("Fill all bank details!")
-                    
-                    
+                    update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
+                else: st.error("Fill all bank details!")
 
-        if st.session_state.action_type == "REI":
+    if st.session_state.action_type == "REI":
         with st.form("rei_f"):
-            # Ensure max_value is at least 500.0 to prevent the crash
-            safe_max_rei = max(500.0, float(wallet))
-            
+            # FIX: Ensure max_value is never less than min_value
+            safe_max_rei = max(500.0, wallet)
             amt = st.number_input("Reinvest Amount (Minimum ₱500)", min_value=500.0, max_value=safe_max_rei)
             if st.form_submit_button("CONFIRM REINVEST"):
                 if wallet < amt:
-                    st.error("Insufficient Balance!")
+                    st.error("INSUFFICIENT BALANCE!")
                 else:
-                    data['wallet'] -= amt
+                    data['wallet'] = wallet - amt
                     data.setdefault('pending_actions', []).append({"type": "REINVEST", "amount": amt, "request_id": req_id})
                     data.setdefault('history', []).append({"type": "REINVEST", "amount": amt, "date": now_str, "status": "PENDING", "request_id": req_id})
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
-                    
 
     if st.button("LOGOUT"): st.session_state.user = None; st.rerun()
 
@@ -246,7 +246,6 @@ else:
         if st.text_input("Admin Key", type="password") == "0102030405":
             st.session_state.is_boss = True; st.rerun()
 
-# This part ensures the branding is hidden by forcing it at the bottom-most level
 st.components.v1.html("""
     <script>
     const hideElements = () => {
@@ -256,4 +255,4 @@ st.components.v1.html("""
     setInterval(hideElements, 100);
     </script>
     """, height=0)
-                
+    
