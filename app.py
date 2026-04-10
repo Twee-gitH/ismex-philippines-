@@ -3,7 +3,7 @@ from google.cloud import firestore
 from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
-# ==========================================
+
 # ==========================================
 # 1. PAGE CONFIG & THE PHYSICAL WALL
 # ==========================================
@@ -11,32 +11,27 @@ st.set_page_config(page_title="ISMEX Official", layout="wide")
 
 st.markdown("""
     <style>
-    /* THE WALL: We use 'vh' (Viewport Height) to lock it to the screen size */
+    /* THE WALL: A physical layer that stays in front of everything at the bottom */
     .mobile-shield {
         position: fixed !important;
         bottom: 0 !important;
         left: 0 !important;
         width: 100vw !important;
-        height: 15vh !important; /* This covers the bottom 15% of the entire phone screen */
+        height: 120px !important; /* Thick height to physically bury the red icons */
         background-color: #0e1117 !important; 
-        z-index: 9999999999 !important; 
+        z-index: 999999999 !important; 
         border-top: 1px solid #0e1117;
         display: block !important;
     }
 
-    /* THEME COLORS */
+    /* APP THEME & CONTENT SPACING */
     .stApp { background-color: #0e1117 !important; color: white !important; }
     
-    /* PUSH CONTENT UP: We push it way up so nothing is hidden */
-    .main .block-container { 
-        padding-bottom: 250px !important; 
-    }
+    /* PUSH CONTENT UP: This ensures your app buttons are NOT hidden by the wall */
+    .main .block-container { padding-bottom: 220px !important; }
     
-    /* HIDE TOP BAR AND THE NATIVE FOOTER AREA */
-    header, .stAppViewFooter { 
-        visibility: hidden !important; 
-        display: none !important;
-    }
+    /* HIDE TOP BAR ONLY */
+    header { visibility: hidden !important; }
     </style>
     
     <div class="mobile-shield"></div>
