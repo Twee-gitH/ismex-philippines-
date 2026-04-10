@@ -5,37 +5,50 @@ from datetime import datetime, timedelta
 
 
 # ==========================================
-# 1. PAGE CONFIG & THE PHYSICAL WALL
+# 1. PAGE CONFIG & THE INJECTED WALL
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
+# 1. THE STYLING
 st.markdown("""
     <style>
-    /* THE PHYSICAL WALL: A solid layer that sits in front of the icons */
-    .mobile-shield {
+    /* This creates the look of the wall */
+    #forced-wall {
         position: fixed !important;
         bottom: 0 !important;
         left: 0 !important;
         width: 100vw !important;
-        height: 130px !important; /* Extra tall to physically bury the red box */
+        height: 125px !important; 
         background-color: #0e1117 !important; 
         z-index: 999999999 !important; 
-        border-top: 1px solid #0e1117;
         display: block !important;
+        border-top: 1px solid #0e1117;
     }
 
-    /* THEME & CONTENT SPACING */
-    .stApp { background-color: #0e1117 !important; color: white !important; }
-    
-    /* PUSH CONTENT UP: This keeps your app buttons safe from the wall */
+    .stApp { background-color: #0e1117 !important; }
     .main .block-container { padding-bottom: 250px !important; }
-    
-    /* HIDE TOP BAR */
     header { visibility: hidden !important; }
     </style>
-    
-    <div class="mobile-shield"></div>
     """, unsafe_allow_html=True)
+
+# 2. THE INJECTION (This forces the wall to show up in front of everything)
+st.components.v1.html("""
+    <script>
+    const createWall = () => {
+        const target = window.parent.document.body;
+        if (!window.parent.document.getElementById('forced-wall')) {
+            const wall = window.parent.document.createElement('div');
+            wall.id = 'forced-wall';
+            // Match your app background color exactly
+            wall.style.cssText = "position:fixed; bottom:0; left:0; width:100vw; height:125px; background:#0e1117; z-index:999999999; display:block;";
+            target.appendChild(wall);
+        }
+    };
+    // Run immediately and then keep checking to ensure it stays there
+    createWall();
+    setInterval(createWall, 500);
+    </script>
+    """, height=0)
 
 
 
