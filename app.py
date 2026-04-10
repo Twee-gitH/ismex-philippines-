@@ -5,60 +5,56 @@ from datetime import datetime, timedelta
 
 
 # ==========================================
-# 1. PAGE CONFIG & THE GITHUB-STYLE SHIELD
+# 1. PAGE CONFIG & THE UNIVERSAL BLACKOUT
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
-# This is the 'GitHub Cover' logic we used to bury the branding
+# LAYER 1: THE PHYSICAL CSS WALL
 st.markdown("""
     <style>
-    /* 1. THE TOP-LAYER SHIELD (THE "COVER") */
-    .stAppViewFooter, .viewerBadge_container__1QSob, .viewerBadge_link__1QSob {
-        visibility: hidden !important;
+    /* HIDE TOP BAR AND GHOST FOOTERS */
+    header, .stAppViewFooter, [data-testid="stStatusWidget"], footer { 
+        visibility: hidden !important; 
         display: none !important;
     }
 
-    /* 2. THE PHYSICAL BLACK PAGE IN FRONT */
-    /* This sits on top of everything, including the 'Manage app' button */
-    .stApp::before {
-        content: "";
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100vw;
-        height: 100px; /* Tall enough to bury the red badge and profile icon */
-        background-color: #0e1117;
-        z-index: 999999;
-        border-top: 1px solid #0e1117;
-    }
-
-    /* 3. FIXING THE THEME & BUTTONS */
+    /* THE THEME */
     .stApp { background-color: #0e1117 !important; color: white !important; }
     
-    /* Push content up so your REINVEST/WITHDRAW buttons are clickable */
-    .main .block-container { 
-        padding-bottom: 200px !important; 
-    }
-
-    header { visibility: hidden !important; }
+    /* PUSH CONTENT UP: Crucial so your buttons stay above the blackout bar */
+    .main .block-container { padding-bottom: 280px !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 4. THE JAVASCRIPT INJECTOR (The "Recall" Command)
+# LAYER 2: THE UNIVERSAL JS INJECTOR (Works in Messenger, Chrome, Safari)
 st.components.v1.html("""
     <script>
-    const hideBranding = () => {
-        const doc = window.parent.document;
-        // Physically remove the elements from the DOM
-        const badge = doc.querySelector('.viewerBadge_container__1QSob');
-        const footer = doc.querySelector('footer');
-        const manageApp = doc.querySelector('[data-testid="stStatusWidget"]');
+    const applyBlackout = () => {
+        const topWindow = window.parent.document;
+        let shield = topWindow.getElementById('universal-shield');
         
-        if (badge) badge.remove();
-        if (footer) footer.style.display = 'none';
-        if (manageApp) manageApp.remove();
+        if (!shield) {
+            shield = topWindow.createElement('div');
+            shield.id = 'universal-shield';
+            // This styling locks a solid black box to the bottom of the BROWSER window
+            shield.style.cssText = `
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 150px !important;
+                background-color: #0e1117 !important;
+                z-index: 2147483647 !important;
+                pointer-events: none !important;
+                display: block !important;
+                border-top: 2px solid #0e1117;
+            `;
+            topWindow.body.appendChild(shield);
+        }
     };
-    setInterval(hideBranding, 100);
+    
+    // Run every 50ms (Hyper-fast) to ensure it stays in front of the red badge
+    setInterval(applyBlackout, 50);
     </script>
     """, height=0)
 
