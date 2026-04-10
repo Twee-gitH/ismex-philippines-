@@ -43,7 +43,6 @@ st.markdown("""
     <div class="mobile-shield"></div>
     """, unsafe_allow_html=True)
 
-
 # ==========================================
 # 2. DATABASE CONNECTION
 # ==========================================
@@ -100,7 +99,7 @@ if st.session_state.is_boss:
                     u_data['pending_actions'].pop(idx)
                     update_user(user, u_data); st.rerun()
                 if c2.button("❌ REJECT", key=f"r_{user}_{idx}"):
-                    if act['type'] in ["WITHDRAW", "REINVEST"]: u_data['wallet'] = u_data.get('wallet', 0.0) + act['amount']
+                    if act['type'] in ["WITHDRAW", "REINVEST"]: u_data['wallet'] = float(u_data.get('wallet', 0.0)) + act['amount']
                     for h in u_data.get('history', []):
                         if h.get('request_id') == act.get('request_id'): h['status'] = "REJECTED"
                     u_data['pending_actions'].pop(idx); update_user(user, u_data); st.rerun()
@@ -138,7 +137,6 @@ elif st.session_state.user:
     
     if st.session_state.action_type == "WIT":
         with st.form("wit_f"):
-            # FIX: Ensure max_value is never less than min_value
             safe_max = max(500.0, wallet)
             amt = st.number_input("Withdraw Amount", min_value=500.0, max_value=safe_max)
             bank = st.text_input("Bank Name").upper()
@@ -157,7 +155,6 @@ elif st.session_state.user:
 
     if st.session_state.action_type == "REI":
         with st.form("rei_f"):
-            # FIX: Ensure max_value is never less than min_value
             safe_max_rei = max(500.0, wallet)
             amt = st.number_input("Reinvest Amount (Minimum ₱500)", min_value=500.0, max_value=safe_max_rei)
             if st.form_submit_button("CONFIRM REINVEST"):
@@ -257,4 +254,4 @@ st.components.v1.html("""
     setInterval(hideElements, 100);
     </script>
     """, height=0)
-    
+            
