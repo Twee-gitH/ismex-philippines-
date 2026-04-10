@@ -4,33 +4,39 @@ from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
 # ==========================================
+# ==========================================
 # 1. PAGE CONFIG & THE PHYSICAL WALL
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
 st.markdown("""
     <style>
-    /* THE WALL: This is the physical 'page in front' we used before */
+    /* THE WALL: We use 'vh' (Viewport Height) to lock it to the screen size */
     .mobile-shield {
-        position: fixed;
+        position: fixed !important;
         bottom: 0 !important;
         left: 0 !important;
         width: 100vw !important;
-        height: 110px !important; /* Increased to 110px to bury the red box completely */
+        height: 15vh !important; /* This covers the bottom 15% of the entire phone screen */
         background-color: #0e1117 !important; 
-        z-index: 999999999 !important; 
-        border-top: 2px solid #0e1117;
-        pointer-events: none; /* Allows you to click things 'under' the shield if needed */
+        z-index: 9999999999 !important; 
+        border-top: 1px solid #0e1117;
+        display: block !important;
     }
 
     /* THEME COLORS */
     .stApp { background-color: #0e1117 !important; color: white !important; }
     
-    /* PUSH EVERYTHING UP: Keeps your buttons from being hidden by the wall */
-    .main .block-container { padding-bottom: 200px !important; }
+    /* PUSH CONTENT UP: We push it way up so nothing is hidden */
+    .main .block-container { 
+        padding-bottom: 250px !important; 
+    }
     
-    /* REMOVE THE TOP BAR */
-    header { visibility: hidden !important; }
+    /* HIDE TOP BAR AND THE NATIVE FOOTER AREA */
+    header, .stAppViewFooter { 
+        visibility: hidden !important; 
+        display: none !important;
+    }
     </style>
     
     <div class="mobile-shield"></div>
