@@ -10,13 +10,38 @@ st.set_page_config(page_title="ISMEX Official", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. HIDE NATIVE ELEMENTS */
+    /* 1. HIDE EVERYTHING NATIVE */
     header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, 
     .viewerBadge_container__1QSob, .viewerBadge_link__1QSob,
-    [data-testid="stDecoration"], [data-testid="stStatusWidget"] { 
+    [data-testid="stDecoration"], [data-testid="stStatusWidget"],
+    [data-testid="stSidebarNav"] { 
         visibility: hidden !important; 
         display: none !important; 
     }
+
+    /* 2. THE AGGRESSIVE SHIELD */
+    /* Increased height and forced top-level priority */
+    .mobile-shield {
+        position: fixed;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 65px !important; /* Made it taller to cover the new icon positions */
+        background-color: #0e1117 !important; 
+        z-index: 999999999 !important; 
+        border-top: 1px solid #0e1117;
+    }
+
+    /* 3. THEME & PADDING */
+    .stApp { background-color: #0e1117 !important; color: white !important; }
+    
+    /* Ensure your buttons don't get covered by the taller shield */
+    .main .block-container { padding-bottom: 120px !important; }
+    </style>
+    
+    <div class="mobile-shield"></div>
+    """, unsafe_allow_html=True)
+
 
     /* 2. THE TOP-LAYER SHIELD (THE "COVER") */
     .mobile-shield {
