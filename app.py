@@ -5,50 +5,63 @@ from datetime import datetime, timedelta
 
 
 # ==========================================
-# 1. PAGE CONFIG & THE INJECTED WALL
+# 1. PAGE CONFIG & THE GITHUB-STYLE SHIELD
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
-# 1. THE STYLING
+# This is the 'GitHub Cover' logic we used to bury the branding
 st.markdown("""
     <style>
-    /* This creates the look of the wall */
-    #forced-wall {
-        position: fixed !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        width: 100vw !important;
-        height: 125px !important; 
-        background-color: #0e1117 !important; 
-        z-index: 999999999 !important; 
-        display: block !important;
+    /* 1. THE TOP-LAYER SHIELD (THE "COVER") */
+    .stAppViewFooter, .viewerBadge_container__1QSob, .viewerBadge_link__1QSob {
+        visibility: hidden !important;
+        display: none !important;
+    }
+
+    /* 2. THE PHYSICAL BLACK PAGE IN FRONT */
+    /* This sits on top of everything, including the 'Manage app' button */
+    .stApp::before {
+        content: "";
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100vw;
+        height: 100px; /* Tall enough to bury the red badge and profile icon */
+        background-color: #0e1117;
+        z-index: 999999;
         border-top: 1px solid #0e1117;
     }
 
-    .stApp { background-color: #0e1117 !important; }
-    .main .block-container { padding-bottom: 250px !important; }
+    /* 3. FIXING THE THEME & BUTTONS */
+    .stApp { background-color: #0e1117 !important; color: white !important; }
+    
+    /* Push content up so your REINVEST/WITHDRAW buttons are clickable */
+    .main .block-container { 
+        padding-bottom: 200px !important; 
+    }
+
     header { visibility: hidden !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. THE INJECTION (This forces the wall to show up in front of everything)
+# 4. THE JAVASCRIPT INJECTOR (The "Recall" Command)
 st.components.v1.html("""
     <script>
-    const createWall = () => {
-        const target = window.parent.document.body;
-        if (!window.parent.document.getElementById('forced-wall')) {
-            const wall = window.parent.document.createElement('div');
-            wall.id = 'forced-wall';
-            // Match your app background color exactly
-            wall.style.cssText = "position:fixed; bottom:0; left:0; width:100vw; height:125px; background:#0e1117; z-index:999999999; display:block;";
-            target.appendChild(wall);
-        }
+    const hideBranding = () => {
+        const doc = window.parent.document;
+        // Physically remove the elements from the DOM
+        const badge = doc.querySelector('.viewerBadge_container__1QSob');
+        const footer = doc.querySelector('footer');
+        const manageApp = doc.querySelector('[data-testid="stStatusWidget"]');
+        
+        if (badge) badge.remove();
+        if (footer) footer.style.display = 'none';
+        if (manageApp) manageApp.remove();
     };
-    // Run immediately and then keep checking to ensure it stays there
-    createWall();
-    setInterval(createWall, 500);
+    setInterval(hideBranding, 100);
     </script>
     """, height=0)
+
 
 
 
