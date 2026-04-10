@@ -4,36 +4,38 @@ from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. PAGE CONFIG & THE PHYSICAL COVER
+# 1. PAGE CONFIG & THE PHYSICAL WALL
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
 st.markdown("""
     <style>
-    /* THE COVER: A physical page layer in front of the bottom area */
+    /* THE WALL: This is the physical 'page in front' we used before */
     .mobile-shield {
         position: fixed;
         bottom: 0 !important;
         left: 0 !important;
         width: 100vw !important;
-        height: 100px !important; /* Thick height to bury icons in all browsers */
+        height: 110px !important; /* Increased to 110px to bury the red box completely */
         background-color: #0e1117 !important; 
         z-index: 999999999 !important; 
         border-top: 2px solid #0e1117;
+        pointer-events: none; /* Allows you to click things 'under' the shield if needed */
     }
 
-    /* APP THEME */
+    /* THEME COLORS */
     .stApp { background-color: #0e1117 !important; color: white !important; }
     
-    /* PUSH CONTENT UP: Prevents the shield from covering your app buttons */
-    .main .block-container { padding-bottom: 180px !important; }
+    /* PUSH EVERYTHING UP: Keeps your buttons from being hidden by the wall */
+    .main .block-container { padding-bottom: 200px !important; }
     
-    /* HIDE TOP BAR ONLY */
+    /* REMOVE THE TOP BAR */
     header { visibility: hidden !important; }
     </style>
     
     <div class="mobile-shield"></div>
     """, unsafe_allow_html=True)
+
 
 
 # ==========================================
