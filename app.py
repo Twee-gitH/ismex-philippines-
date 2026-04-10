@@ -136,29 +136,42 @@ elif st.session_state.user:
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
                 else: st.warning("Please upload receipt first")
     
-    if st.session_state.action_type == "WIT":
+        if st.session_state.action_type == "WIT":
         with st.form("wit_f"):
-            amt = st.number_input("Withdraw Amount", min_value=500.0, max_value=wallet)
+            # Ensure max_value is at least 500.0 to prevent the crash
+            safe_max = max(500.0, float(wallet))
+            
+            amt = st.number_input("Withdraw Amount", min_value=500.0, max_value=safe_max)
             bank = st.text_input("Bank Name").upper()
             acc_name = st.text_input("Account Name").upper()
             acc_num = st.text_input("Account Number")
             if st.form_submit_button("REQUEST WITHDRAW"):
-                if bank and acc_name and acc_num:
+                if wallet < amt:
+                    st.error("Insufficient Balance!")
+                elif bank and acc_name and acc_num:
                     data['wallet'] -= amt
                     details = f"{bank} | {acc_name} | {acc_num}"
                     data.setdefault('pending_actions', []).append({"type": "WITHDRAW", "amount": amt, "request_id": req_id, "bank_details": details})
                     data.setdefault('history', []).append({"type": "WITHDRAW", "amount": amt, "date": now_str, "status": "PENDING", "request_id": req_id})
                     update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
                 else: st.error("Fill all bank details!")
+                    
 
-    if st.session_state.action_type == "REI":
+        if st.session_state.action_type == "REI":
         with st.form("rei_f"):
-            amt = st.number_input("Reinvest Amount (Minimum ₱500)", min_value=500.0, max_value=wallet)
+            # Ensure max_value is at least 500.0 to prevent the crash
+            safe_max_rei = max(500.0, float(wallet))
+            
+            amt = st.number_input("Reinvest Amount (Minimum ₱500)", min_value=500.0, max_value=safe_max_rei)
             if st.form_submit_button("CONFIRM REINVEST"):
-                data['wallet'] -= amt
-                data.setdefault('pending_actions', []).append({"type": "REINVEST", "amount": amt, "request_id": req_id})
-                data.setdefault('history', []).append({"type": "REINVEST", "amount": amt, "date": now_str, "status": "PENDING", "request_id": req_id})
-                update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
+                if wallet < amt:
+                    st.error("Insufficient Balance!")
+                else:
+                    data['wallet'] -= amt
+                    data.setdefault('pending_actions', []).append({"type": "REINVEST", "amount": amt, "request_id": req_id})
+                    data.setdefault('history', []).append({"type": "REINVEST", "amount": amt, "date": now_str, "status": "PENDING", "request_id": req_id})
+                    update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
+                    
 
     if st.button("LOGOUT"): st.session_state.user = None; st.rerun()
 
