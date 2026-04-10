@@ -10,38 +10,40 @@ st.set_page_config(page_title="ISMEX Official", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. HIDE EVERYTHING NATIVE */
+    /* 1. THE INVISIBLE KILLER (Hides the actual elements) */
     header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, 
     .viewerBadge_container__1QSob, .viewerBadge_link__1QSob,
     [data-testid="stDecoration"], [data-testid="stStatusWidget"],
-    [data-testid="stSidebarNav"] { 
+    [data-testid="stSidebarNav"], .stAppViewFooter { 
         visibility: hidden !important; 
-        display: none !important; 
+        display: none !important;
+        opacity: 0 !important;
     }
 
-    /* 2. THE AGGRESSIVE SHIELD */
+    /* 2. THE PHYSICAL BARRIER (The "Page in front") */
+    /* We use 'fixed' to lock it to the bottom of the browser window */
     .mobile-shield {
         position: fixed;
         bottom: 0 !important;
         left: 0 !important;
         width: 100vw !important;
-        height: 65px !important; 
+        height: 75px !important; /* Thick enough to bury the red icons */
         background-color: #0e1117 !important; 
-        z-index: 999999999 !important; 
-        border-top: 1px solid #0e1117;
+        z-index: 2147483647 !important; /* This is the maximum possible z-index in CSS */
+        border-top: 2px solid #0e1117;
+        pointer-events: auto !important;
     }
 
-    /* 3. THEME & PADDING */
+    /* 3. APP THEME & PADDING */
     .stApp { background-color: #0e1117 !important; color: white !important; }
-    div.stButton > button { background-color: #1c1e26 !important; color: #ffffff !important; border: 2px solid #333 !important; border-radius: 8px !important; width: 100% !important; }
-    .hist-card { background: #1c1e26; padding: 15px; border-radius: 5px; margin-bottom: 8px; border-left: 5px solid #00ff88; }
-    .balance-box { background: #1c1e26; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #333; margin-bottom: 15px; }
     
-    .main .block-container { padding-bottom: 120px !important; }
+    /* This pushes your content up so the shield doesn't hide your buttons */
+    .main .block-container { padding-bottom: 150px !important; }
     </style>
     
     <div class="mobile-shield"></div>
     """, unsafe_allow_html=True)
+
 
 # ==========================================
 # 2. DATABASE CONNECTION
