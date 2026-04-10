@@ -4,79 +4,37 @@ from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. PAGE CONFIG & THE ANTI-BRANDING SHIELD
+# 1. PAGE CONFIG & THE PHYSICAL COVER
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
-# LAYER A: CSS BRUTE FORCE
 st.markdown("""
     <style>
-    /* 1. HIDE ALL NATIVE ELEMENTS */
-    header, footer, .stDeployButton, [data-testid="stToolbar"], #MainMenu, 
-    .viewerBadge_container__1QSob, .viewerBadge_link__1QSob,
-    [data-testid="stDecoration"], [data-testid="stStatusWidget"],
-    [data-testid="stSidebarNav"], .stAppViewFooter { 
-        visibility: hidden !important; 
-        display: none !important;
-        opacity: 0 !important;
-    }
-
-    /* 2. THE PHYSICAL BOTTOM BAR (THE COVER) */
+    /* THE COVER: A physical page layer in front of the bottom area */
     .mobile-shield {
         position: fixed;
         bottom: 0 !important;
         left: 0 !important;
         width: 100vw !important;
-        height: 75px !important;
+        height: 100px !important; /* Thick height to bury icons in all browsers */
         background-color: #0e1117 !important; 
-        z-index: 2147483647 !important; 
-        border-top: 1px solid #0e1117;
+        z-index: 999999999 !important; 
+        border-top: 2px solid #0e1117;
     }
 
-    /* 3. THEME & SPACING */
+    /* APP THEME */
     .stApp { background-color: #0e1117 !important; color: white !important; }
-    div.stButton > button { background-color: #1c1e26 !important; color: #ffffff !important; border: 2px solid #333 !important; border-radius: 8px !important; width: 100% !important; }
-    .hist-card { background: #1c1e26; padding: 15px; border-radius: 5px; margin-bottom: 8px; border-left: 5px solid #00ff88; }
-    .balance-box { background: #1c1e26; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #333; margin-bottom: 15px; }
-    .main .block-container { padding-bottom: 150px !important; }
+    
+    /* PUSH CONTENT UP: Prevents the shield from covering your app buttons */
+    .main .block-container { padding-bottom: 180px !important; }
+    
+    /* HIDE TOP BAR ONLY */
+    header { visibility: hidden !important; }
     </style>
     
     <div class="mobile-shield"></div>
     """, unsafe_allow_html=True)
 
-# LAYER B: JAVASCRIPT AUTO-KILLER (Deletes branding from the browser's memory)
-st.components.v1.html("""
-    <script>
-    const cleanApp = () => {
-        const doc = window.parent.document;
-        
-        // Target specific Streamlit branding classes
-        const targets = [
-            '.viewerBadge_container__1QSob',
-            '.viewerBadge_link__1QSob',
-            'footer',
-            'header',
-            '[data-testid="stStatusWidget"]'
-        ];
-        
-        targets.forEach(selector => {
-            const el = doc.querySelector(selector);
-            if (el) el.remove();
-        });
-
-        // Search for any div containing "Hosted with Streamlit" and erase it
-        const allDivs = doc.querySelectorAll('div');
-        allDivs.forEach(div => {
-            if (div.innerText && div.innerText.includes('Streamlit')) {
-                div.style.display = 'none';
-                div.remove();
-            }
-        });
-    };
-    // Run every 100ms to catch elements as they spawn
-    setInterval(cleanApp, 100);
-    </script>
-    """, height=0)
 
 # ==========================================
 # 2. DATABASE CONNECTION
