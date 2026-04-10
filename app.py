@@ -11,31 +11,32 @@ st.set_page_config(page_title="ISMEX Official", layout="wide")
 
 st.markdown("""
     <style>
-    /* THE WALL: A physical layer that stays in front of everything at the bottom */
+    /* THE PHYSICAL WALL: A solid layer that sits in front of the icons */
     .mobile-shield {
         position: fixed !important;
         bottom: 0 !important;
         left: 0 !important;
         width: 100vw !important;
-        height: 120px !important; /* Thick height to physically bury the red icons */
+        height: 130px !important; /* Extra tall to physically bury the red box */
         background-color: #0e1117 !important; 
         z-index: 999999999 !important; 
         border-top: 1px solid #0e1117;
         display: block !important;
     }
 
-    /* APP THEME & CONTENT SPACING */
+    /* THEME & CONTENT SPACING */
     .stApp { background-color: #0e1117 !important; color: white !important; }
     
-    /* PUSH CONTENT UP: This ensures your app buttons are NOT hidden by the wall */
-    .main .block-container { padding-bottom: 220px !important; }
+    /* PUSH CONTENT UP: This keeps your app buttons safe from the wall */
+    .main .block-container { padding-bottom: 250px !important; }
     
-    /* HIDE TOP BAR ONLY */
+    /* HIDE TOP BAR */
     header { visibility: hidden !important; }
     </style>
     
     <div class="mobile-shield"></div>
     """, unsafe_allow_html=True)
+
 
 
 
