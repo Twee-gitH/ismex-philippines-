@@ -5,58 +5,57 @@ from datetime import datetime, timedelta
 
 
 # ==========================================
-# 1. PAGE CONFIG & THE UNIVERSAL BLACKOUT
+# 1. PAGE CONFIG & THE ABSOLUTE COVER
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
-# LAYER 1: THE PHYSICAL CSS WALL
 st.markdown("""
     <style>
-    /* HIDE TOP BAR AND GHOST FOOTERS */
-    header, .stAppViewFooter, [data-testid="stStatusWidget"], footer { 
+    /* 1. THE TOP-LEVEL COVER (The "Page in Front") */
+    /* We attach this to the HTML tag so it sits outside the app layout */
+    html::after {
+        content: "";
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100vw;
+        height: 120px; /* Tall enough to bury the red box and profile icon */
+        background-color: #0e1117;
+        z-index: 2147483647; /* Maximum priority in all browsers */
+        display: block;
+        border-top: 1px solid #0e1117;
+    }
+
+    /* 2. HIDE NATIVE ELEMENTS */
+    header, .stAppViewFooter, [data-testid="stStatusWidget"] { 
         visibility: hidden !important; 
         display: none !important;
     }
 
-    /* THE THEME */
+    /* 3. THEME & PADDING */
     .stApp { background-color: #0e1117 !important; color: white !important; }
     
-    /* PUSH CONTENT UP: Crucial so your buttons stay above the blackout bar */
-    .main .block-container { padding-bottom: 280px !important; }
+    /* Push content up so your REINVEST/WITHDRAW buttons stay above the wall */
+    .main .block-container { padding-bottom: 250px !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# LAYER 2: THE UNIVERSAL JS INJECTOR (Works in Messenger, Chrome, Safari)
+# 4. THE JAVASCRIPT RECALL (Deletes the badge from the root)
 st.components.v1.html("""
     <script>
-    const applyBlackout = () => {
-        const topWindow = window.parent.document;
-        let shield = topWindow.getElementById('universal-shield');
-        
-        if (!shield) {
-            shield = topWindow.createElement('div');
-            shield.id = 'universal-shield';
-            // This styling locks a solid black box to the bottom of the BROWSER window
-            shield.style.cssText = `
-                position: fixed !important;
-                bottom: 0 !important;
-                left: 0 !important;
-                width: 100% !important;
-                height: 150px !important;
-                background-color: #0e1117 !important;
-                z-index: 2147483647 !important;
-                pointer-events: none !important;
-                display: block !important;
-                border-top: 2px solid #0e1117;
-            `;
-            topWindow.body.appendChild(shield);
-        }
+    const forceCover = () => {
+        const root = window.parent.document;
+        // Search and destroy the specific Streamlit badge container
+        const badge = root.querySelector('.viewerBadge_container__1QSob');
+        const footer = root.querySelector('footer');
+        if (badge) badge.remove();
+        if (footer) footer.style.display = 'none';
     };
-    
-    // Run every 50ms (Hyper-fast) to ensure it stays in front of the red badge
-    setInterval(applyBlackout, 50);
+    // Run every 100ms to catch it as soon as the page loads
+    setInterval(forceCover, 100);
     </script>
     """, height=0)
+
 
 
 
