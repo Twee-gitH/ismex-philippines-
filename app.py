@@ -5,40 +5,60 @@ from datetime import datetime, timedelta
 
 
 # ==========================================
-# 1. PAGE CONFIG & THE ABSOLUTE COVER
+# 1. PAGE CONFIG & THE PHYSICAL WALL
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
+# CSS to hide top elements and create space at the bottom
 st.markdown("""
     <style>
-    /* 1. THE TOP-LEVEL COVER (The "Page in Front") */
-    /* We attach this to the HTML tag so it sits outside the app layout */
-    html::after {
-        content: "";
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100vw;
-        height: 120px; /* Tall enough to bury the red box and profile icon */
-        background-color: #0e1117;
-        z-index: 2147483647; /* Maximum priority in all browsers */
-        display: block;
-        border-top: 1px solid #0e1117;
-    }
-
-    /* 2. HIDE NATIVE ELEMENTS */
-    header, .stAppViewFooter, [data-testid="stStatusWidget"] { 
-        visibility: hidden !important; 
-        display: none !important;
-    }
-
-    /* 3. THEME & PADDING */
-    .stApp { background-color: #0e1117 !important; color: white !important; }
+    header, [data-testid="stToolbar"] { visibility: hidden !important; }
+    .stApp { background-color: #0e1117 !important; }
     
-    /* Push content up so your REINVEST/WITHDRAW buttons stay above the wall */
+    /* Push your buttons up so they are not hidden by the wall */
     .main .block-container { padding-bottom: 250px !important; }
     </style>
     """, unsafe_allow_html=True)
+
+# THE GITHUB INJECTION: This builds the 'Page in Front'
+st.components.v1.html("""
+    <script>
+    const buryBranding = () => {
+        // Access the absolute top level of the browser
+        const topDoc = window.parent.document;
+        
+        // 1. Create the Physical Black Wall
+        let wall = topDoc.getElementById('ismex-final-shield');
+        if (!wall) {
+            wall = topDoc.createElement('div');
+            wall.id = 'ismex-final-shield';
+            wall.style.cssText = `
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: 125px !important;
+                background: #0e1117 !important;
+                z-index: 2147483647 !important;
+                display: block !important;
+                border-top: 2px solid #0e1117;
+                pointer-events: none !important;
+            `;
+            topDoc.body.appendChild(wall);
+        }
+
+        // 2. Kill the red badge and profile icon directly
+        const badge = topDoc.querySelector('.viewerBadge_container__1QSob');
+        const footer = topDoc.querySelector('footer');
+        if (badge) badge.style.display = 'none';
+        if (footer) footer.style.display = 'none';
+    };
+
+    // Run every 100ms to ensure it stays in front of the branding
+    setInterval(buryBranding, 100);
+    </script>
+    """, height=0)
+
 
 # 4. THE JAVASCRIPT RECALL (Deletes the badge from the root)
 st.components.v1.html("""
