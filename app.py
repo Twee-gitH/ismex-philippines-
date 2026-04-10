@@ -125,26 +125,16 @@ elif st.session_state.user:
     if col2.button("📤 WITHDRAW"): st.session_state.action_type = "WIT"
     if col3.button("🔄 REINVEST"): st.session_state.action_type = "REI"
 
-    if st.session_state.action_type == "DEP":
-        with st.form("dep_f"):
-            amt = st.number_input("Deposit Amount", min_value=500.0)
-            receipt = st.file_uploader("Browse Receipt", type=['jpg', 'png', 'jpeg'])
-            if st.form_submit_button("SEND TO ADMIN"):
-                if receipt:
-                    data.setdefault('pending_actions', []).append({"type": "DEPOSIT", "amount": amt, "request_id": req_id})
-                    data.setdefault('history', []).append({"type": "DEPOSIT", "amount": amt, "date": now_str, "status": "PENDING", "request_id": req_id})
-                    update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
-                else: st.warning("Please upload receipt first")
-    
         if st.session_state.action_type == "WIT":
         with st.form("wit_f"):
-            # Ensure max_value is at least 500.0 to prevent the crash
+            # This line must be indented (pushed to the right)
             safe_max = max(500.0, float(wallet))
             
             amt = st.number_input("Withdraw Amount", min_value=500.0, max_value=safe_max)
             bank = st.text_input("Bank Name").upper()
             acc_name = st.text_input("Account Name").upper()
             acc_num = st.text_input("Account Number")
+            
             if st.form_submit_button("REQUEST WITHDRAW"):
                 if wallet < amt:
                     st.error("Insufficient Balance!")
@@ -153,8 +143,12 @@ elif st.session_state.user:
                     details = f"{bank} | {acc_name} | {acc_num}"
                     data.setdefault('pending_actions', []).append({"type": "WITHDRAW", "amount": amt, "request_id": req_id, "bank_details": details})
                     data.setdefault('history', []).append({"type": "WITHDRAW", "amount": amt, "date": now_str, "status": "PENDING", "request_id": req_id})
-                    update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
-                else: st.error("Fill all bank details!")
+                    update_user(st.session_state.user, data)
+                    st.session_state.action_type = None
+                    st.rerun()
+                else:
+                    st.error("Fill all bank details!")
+                    
                     
 
         if st.session_state.action_type == "REI":
