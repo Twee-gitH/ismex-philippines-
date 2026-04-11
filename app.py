@@ -201,4 +201,4 @@ else:
     if st.button("GET STARTED"): st.session_state.page = "auth"; st.rerun()
     if st.button("⛔") and st.text_input("Admin", type="password") == "0102030405":
         st.session_state.is_boss = True; st.rerun()
-                            
+                                                                  
