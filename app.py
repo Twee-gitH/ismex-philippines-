@@ -3,104 +3,80 @@ from google.cloud import firestore
 from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
-
 # ==========================================
 # 1. PAGE CONFIG & THE PHYSICAL WALL
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
-# CSS to hide top elements and create space at the bottom
 st.markdown("""
     <style>
-    header, [data-testid="stToolbar"] { visibility: hidden !important; }
-    .stApp { background-color: #0e1117 !important; }
-    
-    /* Push your buttons up so they are not hidden by the wall */
+    header, [data-testid="stToolbar"], footer { visibility: hidden !important; }
+    .stApp { background-color: #0e1117 !important; color: white; }
+    .balance-box {
+        background: linear-gradient(135deg, #1e222d 0%, #0e1117 100%);
+        padding: 2rem;
+        border-radius: 15px;
+        border: 1px solid #00ff88;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .hist-card {
+        background: #161b22;
+        padding: 15px;
+        border-radius: 10px;
+        margin: 10px 0;
+        border-left: 5px solid #00ff88;
+    }
     .main .block-container { padding-bottom: 250px !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# THE GITHUB INJECTION: This builds the 'Page in Front'
+# AGGRESSIVE JS TO HIDE ALL STREAMLIT BRANDING
 st.components.v1.html("""
     <script>
     const buryBranding = () => {
-        // Access the absolute top level of the browser
-        const topDoc = window.parent.document;
-        
-        // 1. Create the Physical Black Wall
-        let wall = topDoc.getElementById('ismex-final-shield');
-        if (!wall) {
-            wall = topDoc.createElement('div');
-            wall.id = 'ismex-final-shield';
-            wall.style.cssText = `
-                position: fixed !important;
-                bottom: 0 !important;
-                left: 0 !important;
-                width: 100vw !important;
-                height: 125px !important;
-                background: #0e1117 !important;
-                z-index: 2147483647 !important;
-                display: block !important;
-                border-top: 2px solid #0e1117;
-                pointer-events: none !important;
-            `;
-            topDoc.body.appendChild(wall);
-        }
-
-        // 2. Kill the red badge and profile icon directly
-        const badge = topDoc.querySelector('.viewerBadge_container__1QSob');
-        const footer = topDoc.querySelector('footer');
-        if (badge) badge.style.display = 'none';
-        if (footer) footer.style.display = 'none';
-    };
-
-    // Run every 100ms to ensure it stays in front of the branding
-    setInterval(buryBranding, 100);
-    </script>
-    """, height=0)
-
-
-# 4. THE JAVASCRIPT RECALL (Deletes the badge from the root)
-st.components.v1.html("""
-    <script>
-    const forceCover = () => {
         const root = window.parent.document;
-        // Search and destroy the specific Streamlit badge container
-        const badge = root.querySelector('.viewerBadge_container__1QSob');
-        const footer = root.querySelector('footer');
-        if (badge) badge.remove();
-        if (footer) footer.style.display = 'none';
+        const selectors = ['.viewerBadge_container__1QSob', 'footer', '#MainMenu', 'header'];
+        selectors.forEach(s => {
+            const el = root.querySelector(s);
+            if (el) { el.style.display = 'none'; el.style.visibility = 'hidden'; }
+        });
+        let wall = root.getElementById('ismex-shield');
+        if (!wall) {
+            wall = root.createElement('div');
+            wall.id = 'ismex-shield';
+            wall.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;height:100px;background:#0e1117;z-index:9999999;pointer-events:none;';
+            root.body.appendChild(wall);
+        }
     };
-    // Run every 100ms to catch it as soon as the page loads
-    setInterval(forceCover, 100);
+    setInterval(buryBranding, 50);
     </script>
     """, height=0)
-
-
-
-
-
-
 
 # ==========================================
 # 2. DATABASE CONNECTION
 # ==========================================
-try:
-    if "firebase" in st.secrets:
-        raw_key = st.secrets["firebase"]["private_key"]
-        fixed_key = raw_key.replace("\\n", "\n")
-        creds_dict = {
-            "type": st.secrets["firebase"]["type"], "project_id": st.secrets["firebase"]["project_id"],
-            "private_key_id": st.secrets["firebase"]["private_key_id"], "private_key": fixed_key,
-            "client_email": st.secrets["firebase"]["client_email"], "client_id": st.secrets["firebase"]["client_id"],
-            "auth_uri": st.secrets["firebase"]["auth_uri"], "token_uri": st.secrets["firebase"]["token_uri"],
-            "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
-            "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"],
-        }
-        creds = service_account.Credentials.from_service_account_info(creds_dict)
-        db = firestore.Client(credentials=creds)
-except Exception as e:
-    st.error(f"DATABASE ERROR: {e}")
+@st.cache_resource
+def get_db():
+    try:
+        if "firebase" in st.secrets:
+            raw_key = st.secrets["firebase"]["private_key"]
+            fixed_key = raw_key.replace("\\n", "\n")
+            creds_dict = {
+                "type": st.secrets["firebase"]["type"], "project_id": st.secrets["firebase"]["project_id"],
+                "private_key_id": st.secrets["firebase"]["private_key_id"], "private_key": fixed_key,
+                "client_email": st.secrets["firebase"]["client_email"], "client_id": st.secrets["firebase"]["client_id"],
+                "auth_uri": st.secrets["firebase"]["auth_uri"], "token_uri": st.secrets["firebase"]["token_uri"],
+                "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
+                "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"],
+            }
+            creds = service_account.Credentials.from_service_account_info(creds_dict)
+            return firestore.Client(credentials=creds)
+    except Exception as e:
+        st.error(f"DATABASE ERROR: {e}")
+    return None
+
+db = get_db()
 
 def load_registry():
     try: return {doc.id: doc.to_dict() for doc in db.collection("investors").stream()}
@@ -144,13 +120,12 @@ if st.session_state.is_boss:
                     u_data['pending_actions'].pop(idx); update_user(user, u_data); st.rerun()
 
 # ==========================================
-# 4. USER DASHBOARD
+# 4. USER DASHBOARD (RE-RESTORED FULL LOGIC)
 # ==========================================
 elif st.session_state.user:
     reg = load_registry()
     data = reg.get(st.session_state.user, {})
     wallet = float(data.get('wallet', 0.0))
-    
     ph_now = datetime.now() + timedelta(hours=8)
     now_str = ph_now.strftime("%Y-%m-%d %I:%M %p")
     req_id = ph_now.strftime("%f")
@@ -176,14 +151,12 @@ elif st.session_state.user:
     
     if st.session_state.action_type == "WIT":
         with st.form("wit_f"):
-            safe_max = max(500.0, wallet)
-            amt = st.number_input("Withdraw Amount", min_value=500.0, max_value=safe_max)
+            amt = st.number_input("Withdraw Amount", min_value=500.0, max_value=max(500.0, wallet))
             bank = st.text_input("Bank Name").upper()
             acc_name = st.text_input("Account Name").upper()
             acc_num = st.text_input("Account Number")
             if st.form_submit_button("REQUEST WITHDRAW"):
-                if wallet < amt:
-                    st.error("INSUFFICIENT BALANCE!")
+                if wallet < amt: st.error("INSUFFICIENT BALANCE!")
                 elif bank and acc_name and acc_num:
                     data['wallet'] = wallet - amt
                     details = f"{bank} | {acc_name} | {acc_num}"
@@ -194,11 +167,9 @@ elif st.session_state.user:
 
     if st.session_state.action_type == "REI":
         with st.form("rei_f"):
-            safe_max_rei = max(500.0, wallet)
-            amt = st.number_input("Reinvest Amount (Minimum ₱500)", min_value=500.0, max_value=safe_max_rei)
+            amt = st.number_input("Reinvest Amount (Min ₱500)", min_value=500.0, max_value=max(500.0, wallet))
             if st.form_submit_button("CONFIRM REINVEST"):
-                if wallet < amt:
-                    st.error("INSUFFICIENT BALANCE!")
+                if wallet < amt: st.error("INSUFFICIENT BALANCE!")
                 else:
                     data['wallet'] = wallet - amt
                     data.setdefault('pending_actions', []).append({"type": "REINVEST", "amount": amt, "request_id": req_id})
@@ -210,33 +181,22 @@ elif st.session_state.user:
     st.markdown("---")
     st.subheader("👥 REFERRAL INFO")
     u_ref = st.session_state.user.replace(' ', '+')
-    ref_url = f"https://ismex-philippines-internationalstockmarketexchange.streamlit.app/?ref={u_ref}"
-    st.code(ref_url)
+    st.code(f"https://ismex-philippines-internationalstockmarketexchange.streamlit.app/?ref={u_ref}")
+    
     ref_list, total_c = [], 0
     for n, i in reg.items():
         if i.get('ref_by') == st.session_state.user:
-            def get_referral_data(username):
-    """Fetch only the investors recruited by this specific user."""
-    ref_list = []
-    total_comm = 0.0
-    
-    # This query is much faster and cheaper than .stream() on the whole collection
-    docs = db.collection("investors").where("ref_by", "==", username).stream()
-    
-    for doc in docs:
-        i = doc.to_dict()
-        n = doc.id
-        # Get the first deposit amount if it exists
-        f_dep = i['inv'][0]['amount'] if i.get('inv') and len(i['inv']) > 0 else 0
-        comm = f_dep * 0.30
-        total_comm += comm
-        ref_list.append({
-            "Name": n, 
-            "1st Deposit": f"₱{f_dep:,.2f}", 
-            "Comm": f"₱{comm:,.2f}"
-        })
-    return ref_list, total_comm
-    
+            f_dep = i['inv'][0]['amount'] if i.get('inv') else 0
+            comm = f_dep * 0.30
+            total_c += comm
+            ref_list.append({"Name": n, "1st Deposit": f"₱{f_dep:,.2f}", "Comm": f"₱{comm:,.2f}"})
+    if ref_list:
+        st.table(ref_list)
+        if st.button("💸 REQUEST COMMISSION WITHDRAW"):
+            data.setdefault('pending_actions', []).append({"type": "COMM_WITHDRAW", "amount": total_c, "request_id": req_id})
+            data.setdefault('history', []).append({"type": "COMM_WITHDRAW", "amount": total_c, "date": now_str, "status": "PENDING", "request_id": req_id})
+            update_user(st.session_state.user, data); st.rerun()
+
     st.markdown("---")
     st.markdown("### 🚀 ACTIVE CAPITALS")
     active = data.get('inv', [])
@@ -289,9 +249,8 @@ else:
     st.title("ISMEX PHILIPPINES 📊")
     if st.button("🚀 PRESS HERE TO REGISTER OR LOG IN", use_container_width=True):
         st.session_state.page = "auth"; st.rerun()
-    col_a, _ = st.columns([0.1, 0.9])
-    if col_a.button("⛔"): st.session_state.admin_mode = not st.session_state.admin_mode
+    if st.button("⛔"): st.session_state.admin_mode = not st.session_state.admin_mode
     if st.session_state.admin_mode:
         if st.text_input("Admin Key", type="password") == "0102030405":
             st.session_state.is_boss = True; st.rerun()
-    
+            
