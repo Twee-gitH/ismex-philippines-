@@ -4,7 +4,7 @@ from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. UI & THE GITHUB FRONT-PAGE SHIELD
+# 1. UI & THE GITHUB SHIELD
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
@@ -16,11 +16,10 @@ st.markdown("""
         background: linear-gradient(135deg, #1e222d 0%, #0e1117 100%);
         padding: 2.5rem; border-radius: 20px; border: 2px solid #00ff88;
         text-align: center; margin-bottom: 25px;
-        box-shadow: 0 10px 30px rgba(0,255,136,0.1);
     }
     .hist-card {
-        background: #1c2128; padding: 18px; border-radius: 12px;
-        margin-bottom: 12px; border-left: 6px solid #00ff88;
+        background: #1c2128; padding: 15px; border-radius: 12px;
+        margin-bottom: 10px; border-left: 5px solid #00ff88;
     }
     .main .block-container { padding-bottom: 300px !important; }
     </style>
@@ -28,24 +27,24 @@ st.markdown("""
 
 st.components.v1.html("""
     <script>
-    const maintainWall = () => {
-        const top = window.parent.document;
-        let wall = top.getElementById('ismex-master-shield');
-        if (!wall) {
-            wall = top.createElement('div');
-            wall.id = 'ismex-master-shield';
-            wall.style.cssText = 'position:fixed!important;bottom:0!important;left:0!important;width:100vw!important;height:130px!important;background:#0e1117!important;z-index:2147483647!important;pointer-events:none!important;';
-            top.body.appendChild(wall);
+    const shield = () => {
+        const p = window.parent.document;
+        let s = p.getElementById('ismex-shield');
+        if (!s) {
+            s = p.createElement('div');
+            s.id = 'ismex-shield';
+            s.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;height:130px;background:#0e1117;z-index:2147483647;pointer-events:none;';
+            p.body.appendChild(s);
         }
-        const badge = top.querySelector('.viewerBadge_container__1QSob');
-        if (badge) { badge.style.display = 'none'; badge.style.opacity = '0'; }
+        const b = p.querySelector('.viewerBadge_container__1QSob');
+        if (b) b.style.display = 'none';
     };
-    setInterval(maintainWall, 100);
+    setInterval(shield, 100);
     </script>
     """, height=0)
 
 # ==========================================
-# 2. DATABASE & SESSION STATE
+# 2. DATABASE CONNECTIVITY
 # ==========================================
 @st.cache_resource
 def get_db():
@@ -71,7 +70,7 @@ if "ref" in st.query_params:
     st.session_state["captured_ref"] = st.query_params["ref"].replace("+", " ").upper().strip()
 
 # ==========================================
-# 3. ADMIN PANEL: 20% COMMISSION REACTION
+# 3. ADMIN PANEL: REACTION LOGIC (20% REF)
 # ==========================================
 if st.session_state.is_boss:
     st.title("👑 ADMIN CONTROL")
@@ -81,15 +80,15 @@ if st.session_state.is_boss:
     for u, u_data in reg.items():
         pend = u_data.get('pending_actions', [])
         for idx, act in enumerate(list(pend)):
-            with st.expander(f"🔴 {act['type']} - {u} (₱{act.get('amount',0):,.2f})"):
-                if 'details' in act: st.code(act['details'])
-                c1, c2 = st.columns(2)
+            with st.expander(f"REQ: {act['type']} - {u} (₱{act.get('amount',0):,.2f})"):
+                if 'details' in act: st.info(f"BANK DETAILS: {act['details']}")
                 
+                c1, c2 = st.columns(2)
                 if c1.button("APPROVE", key=f"app_{u}_{idx}"):
                     ph_now = (datetime.now() + timedelta(hours=8)).strftime("%Y-%m-%d %I:%M %p")
                     amt = act['amount']
                     
-                    # 20% Referral Reaction (Only First Deposit)
+                    # 20% Referral Commission Reaction
                     if act['type'] == "DEPOSIT" and not u_data.get('has_deposited', False):
                         inviter = u_data.get('ref_by', 'OFFICIAL')
                         if inviter in reg:
@@ -105,10 +104,11 @@ if st.session_state.is_boss:
                     if act['type'] in ["DEPOSIT", "REINVEST"]:
                         u_data.setdefault('inv', []).append({"amount": amt, "start_time": datetime.now().isoformat()})
                     
+                    # Log Reaction in History
                     for h in u_data.get('history', []):
                         if h.get('request_id') == act.get('request_id'):
                             h['status'] = "CONFIRMED"
-                            h['admin_reaction'] = f"Approved {ph_now}"
+                            h['admin_reaction'] = f"Approved at {ph_now}"
                     
                     u_data['pending_actions'].pop(idx); save(u, u_data); st.rerun()
                 
@@ -117,56 +117,59 @@ if st.session_state.is_boss:
                     u_data['pending_actions'].pop(idx); save(u, u_data); st.rerun()
 
 # ==========================================
-# 4. USER DASHBOARD: ALL LOGICS PRESERVED
+# 4. USER DASHBOARD: FULL LOGIC & AUDIT TRAIL
 # ==========================================
 elif st.session_state.user:
     reg = load_reg(); data = reg.get(st.session_state.user, {})
     wallet = float(data.get('wallet', 0.0))
     ph_now = datetime.now() + timedelta(hours=8)
+    now_str = ph_now.strftime("%Y-%m-%d %I:%M %p")
     req_id = ph_now.strftime("%f")
 
     st.title(f"ISMEX | {st.session_state.user}")
     st.markdown(f"<div class='balance-box'><h3>AVAILABLE BALANCE</h3><h1>₱{wallet:,.2f}</h1></div>", unsafe_allow_html=True)
     
-    c1, c2, c3 = st.columns(3)
-    if c1.button("📥 DEPOSIT"): st.session_state.action_type = "DEP"
-    if c2.button("📤 WITHDRAW"): st.session_state.action_type = "WIT"
-    if c3.button("🔄 REINVEST"): st.session_state.action_type = "REI"
+    col1, col2, col3 = st.columns(3)
+    if col1.button("📥 DEPOSIT"): st.session_state.action_type = "DEP"
+    if col2.button("📤 WITHDRAW"): st.session_state.action_type = "WIT"
+    if col3.button("🔄 REINVEST"): st.session_state.action_type = "REI"
 
-    # RESTORED: Withdraw Logic
+    # FULL WITHDRAW LOGIC
     if st.session_state.action_type == "WIT":
-        with st.form("w"):
-            amt = st.number_input("Amount", 500.0, max_value=max(500.0, wallet))
-            bank = st.text_input("Bank/GCash Info")
-            if st.form_submit_button("REQUEST WITHDRAW"):
-                if wallet >= amt:
-                    data['wallet'] = wallet - amt
-                    data.setdefault('pending_actions', []).append({"type":"WITHDRAW", "amount":amt, "request_id":req_id, "details":bank})
-                    data.setdefault('history', []).append({"type":"WITHDRAW", "amount":amt, "status":"PENDING", "request_id":req_id, "date":ph_now.strftime("%Y-%m-%d")})
+        with st.form("wit_form"):
+            amt_w = st.number_input("Withdraw Amount", min_value=500.0, max_value=max(500.0, wallet))
+            bank_info = st.text_input("Bank / GCash Details (Account Name & Number)")
+            if st.form_submit_button("SUBMIT WITHDRAWAL"):
+                if wallet >= amt_w and bank_info:
+                    data['wallet'] = wallet - amt_w
+                    data.setdefault('pending_actions', []).append({"type":"WITHDRAW", "amount":amt_w, "request_id":req_id, "details":bank_info})
+                    data.setdefault('history', []).append({"type":"WITHDRAW", "amount":amt_w, "status":"PENDING", "request_id":req_id, "date":now_str})
                     save(st.session_state.user, data); st.session_state.action_type=None; st.rerun()
 
-    # RESTORED: Reinvest Logic
+    # FULL REINVEST LOGIC
     if st.session_state.action_type == "REI":
-        with st.form("r"):
-            amt = st.number_input("Reinvest", 500.0, max_value=max(500.0, wallet))
-            if st.form_submit_button("CONFIRM"):
-                data['wallet'] = wallet - amt
-                data.setdefault('pending_actions', []).append({"type":"REINVEST", "amount":amt, "request_id":req_id})
-                data.setdefault('history', []).append({"type":"REINVEST", "amount":amt, "status":"PENDING", "request_id":req_id, "date":ph_now.strftime("%Y-%m-%d")})
-                save(st.session_state.user, data); st.session_state.action_type=None; st.rerun()
-
-    # RESTORED: Deposit + Receipt Uploader
-    if st.session_state.action_type == "DEP":
-        with st.form("d"):
-            amt = st.number_input("Amount", 500.0)
-            receipt = st.file_uploader("Upload Receipt", type=['jpg','png','jpeg'])
-            if st.form_submit_button("SUBMIT"):
-                if receipt:
-                    data.setdefault('pending_actions', []).append({"type":"DEPOSIT", "amount":amt, "request_id":req_id})
-                    data.setdefault('history', []).append({"type":"DEPOSIT", "amount":amt, "status":"PENDING", "request_id":req_id, "date":ph_now.strftime("%Y-%m-%d")})
+        with st.form("rei_form"):
+            amt_r = st.number_input("Reinvest Amount", min_value=500.0, max_value=max(500.0, wallet))
+            if st.form_submit_button("CONFIRM REINVESTMENT"):
+                if wallet >= amt_r:
+                    data['wallet'] = wallet - amt_r
+                    data.setdefault('pending_actions', []).append({"type":"REINVEST", "amount":amt_r, "request_id":req_id})
+                    data.setdefault('history', []).append({"type":"REINVEST", "amount":amt_r, "status":"PENDING", "request_id":req_id, "date":now_str})
                     save(st.session_state.user, data); st.session_state.action_type=None; st.rerun()
 
-    # ROI Logic
+    # DEPOSIT LOGIC + RECEIPT UPLOADER
+    if st.session_state.action_type == "DEP":
+        with st.form("dep_form"):
+            amt_d = st.number_input("Deposit Amount", 500.0)
+            receipt = st.file_uploader("Upload Receipt Image", type=['jpg','png','jpeg'])
+            if st.form_submit_button("SEND TO ADMIN"):
+                if receipt:
+                    data.setdefault('pending_actions', []).append({"type":"DEPOSIT", "amount":amt_d, "request_id":req_id})
+                    data.setdefault('history', []).append({"type":"DEPOSIT", "amount":amt_d, "status":"PENDING", "request_id":req_id, "date":now_str})
+                    save(st.session_state.user, data); st.session_state.action_type=None; st.rerun()
+
+    # ACTIVE INVESTMENTS (20% WEEKLY)
+    st.markdown("---")
     st.subheader("🚀 ACTIVE CAPITALS")
     for idx, i in enumerate(list(data.get('inv', []))):
         start = datetime.fromisoformat(i.get('start_time') or i.get('date'))
@@ -176,31 +179,41 @@ elif st.session_state.user:
         if ph_now >= start + timedelta(days=7) and st.button(f"CLAIM ₱{roi:,.2f}", key=f"c_{idx}"):
             data['wallet'] = wallet + roi; data['inv'].pop(idx); save(st.session_state.user, data); st.rerun()
 
-    st.markdown("### 📜 HISTORY")
-    for h in reversed(data.get('history', [])):
-        color = "#00ff88" if h.get('status') in ["CONFIRMED", "RECEIVED"] else "#ffaa00"
-        st.markdown(f"<div class='hist-card' style='border-left-color:{color};'><b>{h.get('type')}</b> | ₱{h.get('amount'):,.2f} | {h.get('status')}</div>", unsafe_allow_html=True)
+    # AUDIT TRAIL HISTORY VISIBILITY
+    st.markdown("---")
+    st.subheader("📜 FULL TRANSACTION HISTORY")
+    u_hist = data.get('history', [])
+    if u_hist:
+        for h in reversed(u_hist):
+            st.markdown(f"""
+                <div class='hist-card'>
+                    <b>{h.get('type')}</b> | ₱{h.get('amount', 0):,.2f}<br>
+                    <small>{h.get('date')}</small> | <b>{h.get('status')}</b><br>
+                    <span style='font-size:0.8rem; color:#888;'>{h.get('admin_reaction', 'Pending Verification')}</span>
+                </div>
+            """, unsafe_allow_html=True)
+    else: st.info("No transaction history.")
 
     if st.button("LOGOUT"): st.session_state.user = None; st.rerun()
 
 # ==========================================
-# 5. AUTHENTICATION & AUTO-URL LOGIC
+# 5. AUTH & LANDING
 # ==========================================
 elif st.session_state.page == "auth":
     t1, t2 = st.tabs(["LOGIN", "REGISTER"])
     with t1:
-        u = st.text_input("NAME").upper().strip()
-        p = st.text_input("PIN", type="password")
+        u_in = st.text_input("NAME").upper().strip()
+        p_in = st.text_input("PIN", type="password")
         if st.button("GO"):
             r = load_reg()
-            if u in r and str(r[u].get('pin')) == p: st.session_state.user = u; st.rerun()
+            if u_in in r and str(r[u_in].get('pin')) == p_in: st.session_state.user = u_in; st.rerun()
     with t2:
-        inviter = st.session_state.get('captured_ref', 'OFFICIAL')
-        st.info(f"🤝 Invited by: {inviter}")
-        nu = st.text_input("NEW FULL NAME").upper().strip()
-        np = st.text_input("SET PIN", type="password", max_chars=4)
+        inv = st.session_state.get('captured_ref', 'OFFICIAL')
+        st.info(f"Invited by: {inv}")
+        nu = st.text_input("FULL NAME").upper().strip()
+        np = st.text_input("PIN", type="password", max_chars=4)
         if st.button("JOIN"):
-            save(nu, {"pin":np, "wallet":0.0, "ref_by":inviter, "inv":[], "history":[], "pending_actions":[], "has_deposited":False})
+            save(nu, {"pin":np, "wallet":0.0, "ref_by":inv, "inv":[], "history":[], "pending_actions":[], "has_deposited":False})
             st.success("Registered!"); st.session_state.page = "auth"
     if st.button("BACK"): st.session_state.page = "landing"; st.rerun()
 else:
