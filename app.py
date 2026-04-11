@@ -4,54 +4,64 @@ from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. PAGE CONFIG & THE PHYSICAL WALL
+# 1. PAGE CONFIG & THE FLOATING SHIELD
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
+# CSS to make the app itself look clean
 st.markdown("""
     <style>
-    header, [data-testid="stToolbar"], footer { visibility: hidden !important; }
+    header, [data-testid="stToolbar"], footer { visibility: hidden !important; display: none !important; }
     .stApp { background-color: #0e1117 !important; color: white; }
-    .balance-box {
-        background: linear-gradient(135deg, #1e222d 0%, #0e1117 100%);
-        padding: 2rem;
-        border-radius: 15px;
-        border: 1px solid #00ff88;
-        text-align: center;
-        margin-bottom: 20px;
-    }
-    .hist-card {
-        background: #161b22;
-        padding: 15px;
-        border-radius: 10px;
-        margin: 10px 0;
-        border-left: 5px solid #00ff88;
-    }
-    .main .block-container { padding-bottom: 250px !important; }
+    .main .block-container { padding-bottom: 150px !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# AGGRESSIVE JS TO HIDE ALL STREAMLIT BRANDING
+# THE "GITHUB OVERLAY" INJECTION
+# This script attempts to reach the top-level window (the one showing the URL)
+# and physically cover the bottom 100px with a black bar.
 st.components.v1.html("""
     <script>
-    const buryBranding = () => {
-        const root = window.parent.document;
-        const selectors = ['.viewerBadge_container__1QSob', 'footer', '#MainMenu', 'header'];
-        selectors.forEach(s => {
-            const el = root.querySelector(s);
-            if (el) { el.style.display = 'none'; el.style.visibility = 'hidden'; }
-        });
-        let wall = root.getElementById('ismex-shield');
-        if (!wall) {
-            wall = root.createElement('div');
-            wall.id = 'ismex-shield';
-            wall.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;height:100px;background:#0e1117;z-index:9999999;pointer-events:none;';
-            root.body.appendChild(wall);
+    const coverStreamlitBranding = () => {
+        try {
+            // Target the very top window (outside the streamlit iframe)
+            const topWindow = window.parent.document;
+            
+            // 1. Find the Streamlit Badge/Footer and delete them
+            const footer = topWindow.querySelector('footer');
+            const badge = topWindow.querySelector('.viewerBadge_container__1QSob');
+            if (footer) footer.remove();
+            if (badge) badge.remove();
+
+            // 2. Create a "Physical Floor" if it doesn't exist
+            // This is a black div that stays at the bottom of the SCREEN, not the page
+            let floor = topWindow.getElementById('ismex-custom-floor');
+            if (!floor) {
+                floor = topWindow.createElement('div');
+                floor.id = 'ismex-custom-floor';
+                floor.style.cssText = `
+                    position: fixed !important;
+                    bottom: 0 !important;
+                    left: 0 !important;
+                    width: 100vw !important;
+                    height: 80px !important;
+                    background-color: #0e1117 !important;
+                    z-index: 2147483647 !important;
+                    border-top: 1px solid #0e1117;
+                    display: block !important;
+                `;
+                topWindow.body.appendChild(floor);
+            }
+        } catch (e) {
+            console.log("Access restricted, attempting internal cover...");
         }
     };
-    setInterval(buryBranding, 50);
+
+    // Run immediately and then every 100ms
+    setInterval(coverStreamlitBranding, 100);
     </script>
     """, height=0)
+
 
 # ==========================================
 # 2. DATABASE CONNECTION
