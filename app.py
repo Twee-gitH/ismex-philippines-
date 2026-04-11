@@ -1,164 +1,285 @@
-import streamlit as st
+Import streamlit as st
 from google.cloud import firestore
 from google.oauth2 import service_account
 from datetime import datetime, timedelta
 
-# ==========================================================
-# ZONE 1: UI & THE GITHUB SHIELD (Restored Advertisement)
-# ==========================================================
+
+# ==========================================
+# 1. PAGE CONFIG & THE PHYSICAL WALL
+# ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
-# Initialize state to prevent crashes
-for k, v in [('user', None), ('page', 'landing'), ('is_boss', False), ('action', None)]:
-    if k not in st.session_state: st.session_state[k] = v
-
+# CSS to hide top elements and create space at the bottom
 st.markdown("""
     <style>
-    header, [data-testid="stToolbar"], footer { visibility: hidden !important; display: none !important; }
-    .stApp { background-color: #0e1117 !important; color: white; }
-    .balance-box {
-        background: linear-gradient(135deg, #1e222d 0%, #0e1117 100%);
-        padding: 2.5rem; border-radius: 20px; border: 2px solid #00ff88;
-        text-align: center; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,255,136,0.1);
-    }
-    .inv-card { background: #1e222d; padding: 20px; border-radius: 15px; border-top: 4px solid #00ff88; margin-bottom: 15px; }
-    .live-roi { color: #00ff88; font-family: monospace; font-size: 1.4rem; font-weight: bold; }
+    header, [data-testid="stToolbar"] { visibility: hidden !important; }
+    .stApp { background-color: #0e1117 !important; }
+    
+    /* Push your buttons up so they are not hidden by the wall */
+    .main .block-container { padding-bottom: 250px !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# ==========================================================
-# ZONE 2: DB CONNECTIVITY
-# ==========================================================
-@st.cache_resource
-def get_db():
+# THE GITHUB INJECTION: This builds the 'Page in Front'
+st.components.v1.html("""
+    <script>
+    const buryBranding = () => {
+        // Access the absolute top level of the browser
+        const topDoc = window.parent.document;
+        
+        // 1. Create the Physical Black Wall
+        let wall = topDoc.getElementById('ismex-final-shield');
+        if (!wall) {
+            wall = topDoc.createElement('div');
+            wall.id = 'ismex-final-shield';
+            wall.style.cssText = `
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: 125px !important;
+                background: #0e1117 !important;
+                z-index: 2147483647 !important;
+                display: block !important;
+                border-top: 2px solid #0e1117;
+                pointer-events: none !important;
+            `;
+            topDoc.body.appendChild(wall);
+        }
+
+        // 2. Kill the red badge and profile icon directly
+        const badge = topDoc.querySelector('.viewerBadge_container__1QSob');
+        const footer = topDoc.querySelector('footer');
+        if (badge) badge.style.display = 'none';
+        if (footer) footer.style.display = 'none';
+    };
+
+    // Run every 100ms to ensure it stays in front of the branding
+    setInterval(buryBranding, 100);
+    </script>
+    """, height=0)
+
+
+# 4. THE JAVASCRIPT RECALL (Deletes the badge from the root)
+st.components.v1.html("""
+    <script>
+    const forceCover = () => {
+        const root = window.parent.document;
+        // Search and destroy the specific Streamlit badge container
+        const badge = root.querySelector('.viewerBadge_container__1QSob');
+        const footer = root.querySelector('footer');
+        if (badge) badge.remove();
+        if (footer) footer.style.display = 'none';
+    };
+    // Run every 100ms to catch it as soon as the page loads
+    setInterval(forceCover, 100);
+    </script>
+    """, height=0)
+
+
+
+
+
+
+
+# ==========================================
+# 2. DATABASE CONNECTION
+# ==========================================
+try:
     if "firebase" in st.secrets:
-        info = dict(st.secrets["firebase"])
-        info["private_key"] = info["private_key"].replace("\\n", "\n")
-        creds = service_account.Credentials.from_service_account_info(info)
-        return firestore.Client(credentials=creds)
-    return None
+        raw_key = st.secrets["firebase"]["private_key"]
+        fixed_key = raw_key.replace("\\n", "\n")
+        creds_dict = {
+            "type": st.secrets["firebase"]["type"], "project_id": st.secrets["firebase"]["project_id"],
+            "private_key_id": st.secrets["firebase"]["private_key_id"], "private_key": fixed_key,
+            "client_email": st.secrets["firebase"]["client_email"], "client_id": st.secrets["firebase"]["client_id"],
+            "auth_uri": st.secrets["firebase"]["auth_uri"], "token_uri": st.secrets["firebase"]["token_uri"],
+            "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
+            "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"],
+        }
+        creds = service_account.Credentials.from_service_account_info(creds_dict)
+        db = firestore.Client(credentials=creds)
+except Exception as e:
+    st.error(f"DATABASE ERROR: {e}")
 
-db = get_db()
-def load_reg(): return {doc.id: doc.to_dict() for doc in db.collection("investors").stream()}
-def save(n, d): db.collection("investors").document(n).set(d)
+def load_registry():
+    try: return {doc.id: doc.to_dict() for doc in db.collection("investors").stream()}
+    except: return {}
 
-# ==========================================================
-# ZONE 4: USER DASHBOARD
-# ==========================================================
-if st.session_state.user:
-    # --- ADVERTISEMENT HEADER (RESTORED) ---
-    st.markdown("""
-        <div style='text-align: center; padding: 10px;'>
-            <h1 style='color: #00ff88; margin-bottom:0;'>STOP WORKING FOR MONEY.</h1>
-            <h2 style='color: #ffffff; margin-top:0;'>Let Your Money Work for You.</h2>
-            <p style='font-size: 1.1rem; color: #8b949e;'>The stock market is the ultimate wealth engine. Own a piece of innovation and watch your value increase rapidly.</p>
-        </div>
-    """, unsafe_allow_html=True)
+def update_user(name, data):
+    db.collection("investors").document(name).set(data)
 
-    reg = load_reg()
+# State initialization
+for key, val in [('page','landing'), ('user',None), ('is_boss',False), ('admin_mode',False), ('action_type',None)]:
+    if key not in st.session_state: st.session_state[key] = val
+
+if "ref" in st.query_params:
+    st.session_state["captured_ref"] = st.query_params["ref"].replace("+", " ").upper().strip()
+
+# ==========================================
+# 3. ADMIN PANEL
+# ==========================================
+if st.session_state.is_boss:
+    st.title("👑 ADMIN CONTROL")
+    if st.button("EXIT ADMIN"): st.session_state.is_boss = False; st.rerun()
+    reg = load_registry()
+    for user, u_data in reg.items():
+        pending = u_data.get('pending_actions', [])
+        for idx, act in enumerate(list(pending)):
+            with st.expander(f"{act['type']} - {user} - ₱{act.get('amount',0):,.2f}"):
+                if 'bank_details' in act: st.write(f"🏦 {act['bank_details']}")
+                c1, c2 = st.columns(2)
+                if c1.button("✅ APPROVE", key=f"a_{user}_{idx}"):
+                    ph_now = datetime.now() + timedelta(hours=8)
+                    if act['type'] in ["DEPOSIT", "REINVEST"]:
+                        u_data.setdefault('inv', []).append({"amount": act['amount'], "start_time": ph_now.isoformat()})
+                    for h in u_data.get('history', []):
+                        if h.get('request_id') == act.get('request_id'): h['status'] = "CONFIRMED"
+                    u_data['pending_actions'].pop(idx)
+                    update_user(user, u_data); st.rerun()
+                if c2.button("❌ REJECT", key=f"r_{user}_{idx}"):
+                    if act['type'] in ["WITHDRAW", "REINVEST"]: u_data['wallet'] = float(u_data.get('wallet', 0.0)) + act['amount']
+                    for h in u_data.get('history', []):
+                        if h.get('request_id') == act.get('request_id'): h['status'] = "REJECTED"
+                    u_data['pending_actions'].pop(idx); update_user(user, u_data); st.rerun()
+
+# ==========================================
+# 4. USER DASHBOARD
+# ==========================================
+elif st.session_state.user:
+    reg = load_registry()
     data = reg.get(st.session_state.user, {})
-    wallet = float(data.get('wallet', 0))
-    ph_now = datetime.now() + timedelta(hours=8)
+    wallet = float(data.get('wallet', 0.0))
     
-    st.markdown(f"<div class='balance-box'><h3>WALLET BALANCE</h3><h1>₱{wallet:,.2f}</h1></div>", unsafe_allow_html=True)
+    ph_now = datetime.now() + timedelta(hours=8)
+    now_str = ph_now.strftime("%Y-%m-%d %I:%M %p")
+    req_id = ph_now.strftime("%f")
+
+    st.title(f"WELCOME, {st.session_state.user}")
+    st.markdown(f"<div class='balance-box'><h3>AVAILABLE BALANCE</h3><h1>₱{wallet:,.2f}</h1></div>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns(3)
-    if col1.button("📥 DEPOSIT"): st.session_state.action = "DEP"
-    if col2.button("📤 WITHDRAW"): st.session_state.action = "WIT"
-    if col3.button("🔄 REINVEST"): st.session_state.action = "REI"
+    if col1.button("📥 DEPOSIT"): st.session_state.action_type = "DEP"
+    if col2.button("📤 WITHDRAW"): st.session_state.action_type = "WIT"
+    if col3.button("🔄 REINVEST"): st.session_state.action_type = "REI"
 
-    # Action Logic (Withdraw/Reinvest) includes Wallet Validation to fix your negative balance
-    if st.session_state.action == "WIT":
-        with st.form("w_f"):
-            amt = st.number_input("Amount", 500.0)
-            bank = st.text_area("Payout Details")
-            if st.form_submit_button("SUBMIT"):
-                if wallet >= amt:
-                    data['wallet'] = wallet - amt
-                    data.setdefault('pending', []).append({"type":"WITHDRAW", "amount":amt, "id":ph_now.strftime("%H%M%S"), "details":bank})
-                    data.setdefault('history', []).append({"type":"WITHDRAW", "amount":amt, "status":"PENDING", "date":ph_now.isoformat()})
-                    save(st.session_state.user, data); st.session_state.action = None; st.rerun()
-                else: st.error("Insufficient Balance!")
-
-    # ==========================================================
-    # REFERRAL LOGIC & TABLE (RESTORED & IMPROVED)
-    # ==========================================================
-    st.markdown("---")
-    st.subheader("👥 YOUR REFERRAL NETWORK")
-    ref_link = f"https://ismex.streamlit.app/?ref={st.session_state.user}"
-    st.code(ref_link, language=None)
+    if st.session_state.action_type == "DEP":
+        with st.form("dep_f"):
+            amt = st.number_input("Deposit Amount", min_value=500.0)
+            receipt = st.file_uploader("Browse Receipt", type=['jpg', 'png', 'jpeg'])
+            if st.form_submit_button("SEND TO ADMIN"):
+                if receipt:
+                    data.setdefault('pending_actions', []).append({"type": "DEPOSIT", "amount": amt, "request_id": req_id})
+                    data.setdefault('history', []).append({"type": "DEPOSIT", "amount": amt, "date": now_str, "status": "PENDING", "request_id": req_id})
+                    update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
+                else: st.warning("Please upload receipt first")
     
-    ref_table = []
-    for u, u_data in reg.items():
-        if u_data.get('ref_by') == st.session_state.user:
-            # Find their first confirmed deposit
-            f_dep = next((h['amount'] for h in u_data.get('history', []) if h['type'] == "DEPOSIT" and h['status'] == "CONFIRMED"), 0.0)
-            ref_table.append({"Member": u, "1st Deposit": f"₱{f_dep:,.2f}", "Commission (30%)": f"₱{f_dep*0.3:,.2f}"})
-    if ref_table: st.table(ref_table)
+    if st.session_state.action_type == "WIT":
+        with st.form("wit_f"):
+            safe_max = max(500.0, wallet)
+            amt = st.number_input("Withdraw Amount", min_value=500.0, max_value=safe_max)
+            bank = st.text_input("Bank Name").upper()
+            acc_name = st.text_input("Account Name").upper()
+            acc_num = st.text_input("Account Number")
+            if st.form_submit_button("REQUEST WITHDRAW"):
+                if wallet < amt:
+                    st.error("INSUFFICIENT BALANCE!")
+                elif bank and acc_name and acc_num:
+                    data['wallet'] = wallet - amt
+                    details = f"{bank} | {acc_name} | {acc_num}"
+                    data.setdefault('pending_actions', []).append({"type": "WITHDRAW", "amount": amt, "request_id": req_id, "bank_details": details})
+                    data.setdefault('history', []).append({"type": "WITHDRAW", "amount": amt, "date": now_str, "status": "PENDING", "request_id": req_id})
+                    update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
+                else: st.error("Fill all bank details!")
 
-    # ==========================================================
-    # ACTIVE INVESTMENTS (CRASH-PROOF)
-    # ==========================================================
-    st.markdown("---")
-    st.subheader("🚀 ACTIVE RUNNING CAPITAL")
-    active_invs = data.get('inv', [])
-    updated_invs = []
-    changed = False
+    if st.session_state.action_type == "REI":
+        with st.form("rei_f"):
+            safe_max_rei = max(500.0, wallet)
+            amt = st.number_input("Reinvest Amount (Minimum ₱500)", min_value=500.0, max_value=safe_max_rei)
+            if st.form_submit_button("CONFIRM REINVEST"):
+                if wallet < amt:
+                    st.error("INSUFFICIENT BALANCE!")
+                else:
+                    data['wallet'] = wallet - amt
+                    data.setdefault('pending_actions', []).append({"type": "REINVEST", "amount": amt, "request_id": req_id})
+                    data.setdefault('history', []).append({"type": "REINVEST", "amount": amt, "date": now_str, "status": "PENDING", "request_id": req_id})
+                    update_user(st.session_state.user, data); st.session_state.action_type = None; st.rerun()
 
-    for idx, inv in enumerate(active_invs):
-        d_val = inv.get('date')
-        if not d_val: continue # Skip corrupt entries that cause KeyErrors
-        
-        start = datetime.fromisoformat(d_val)
-        end_time = start + timedelta(days=7)
-        expiry = end_time + timedelta(hours=1)
-        is_open = end_time <= ph_now <= expiry
-        
-        if ph_now > expiry:
-            new_val = inv['amount'] * 1.20
-            updated_invs.append({"amount": new_val, "date": ph_now.isoformat()})
-            data.setdefault('history', []).append({"type":"AUTO_REI", "amount":new_val, "date":ph_now.isoformat()})
-            changed = True; continue
-
-        # UI for individual Investment
-        elapsed = (ph_now - start).total_seconds()
-        live_roi = inv['amount'] * (min(1.0, elapsed/(7*86400))) * 0.20
-        
-        with st.container():
-            st.markdown(f"""<div class="inv-card">
-                <small>CAPITAL: ₱{inv['amount']:,.2f}</small><br>
-                <span class="live-roi">₱{live_roi:,.2f}</span><br>
-                <small>Ready: {end_time.strftime('%b %d, %I:%M %p')}</small></div>""", unsafe_allow_html=True)
-            
-            c1, c2 = st.columns(2)
-            if c1.button(f"ROI Only (₱{inv['amount']*0.2:,.2f})", key=f"r_{idx}", disabled=not is_open):
-                data['wallet'] = wallet + (inv['amount']*0.2); inv['date'] = ph_now.isoformat()
-                save(st.session_state.user, data); st.rerun()
-            if c2.button(f"Full Capital (₱{inv['amount']*1.2:,.2f})", key=f"c_{idx}", disabled=not is_open):
-                data['wallet'] = wallet + (inv['amount']*1.2); changed = True; continue
-            updated_invs.append(inv)
-
-    if changed: data['inv'] = updated_invs; save(st.session_state.user, data); st.rerun()
     if st.button("LOGOUT"): st.session_state.user = None; st.rerun()
 
-# ==========================================================
-# ZONE 5: AUTH & AUTO-FILL INVITER
-# ==========================================================
+    st.markdown("---")
+    st.subheader("👥 REFERRAL INFO")
+    u_ref = st.session_state.user.replace(' ', '+')
+    ref_url = f"https://ismex-philippines-internationalstockmarketexchange.streamlit.app/?ref={u_ref}"
+    st.code(ref_url)
+    ref_list, total_c = [], 0
+    for n, i in reg.items():
+        if i.get('ref_by') == st.session_state.user:
+            f_dep = i['inv'][0]['amount'] if i.get('inv') else 0
+            comm = f_dep * 0.30
+            total_c += comm
+            ref_list.append({"Name": n, "1st Deposit": f"₱{f_dep:,.2f}", "Comm": f"₱{comm:,.2f}"})
+    if ref_list:
+        st.table(ref_list)
+        if st.button("💸 REQUEST COMMISSION WITHDRAW"):
+            data.setdefault('pending_actions', []).append({"type": "COMM_WITHDRAW", "amount": total_c, "request_id": req_id})
+            data.setdefault('history', []).append({"type": "COMM_WITHDRAW", "amount": total_c, "date": now_str, "status": "PENDING", "request_id": req_id})
+            update_user(st.session_state.user, data); st.rerun()
+
+    st.markdown("---")
+    st.markdown("### 🚀 ACTIVE CAPITALS")
+    active = data.get('inv', [])
+    for idx, a in enumerate(reversed(active)):
+        start = datetime.fromisoformat(a['start_time'])
+        end = start + timedelta(days=7)
+        prog = min(1.0, (ph_now - start).total_seconds() / (7*86400))
+        roi = a['amount'] * 1.20
+        st.markdown(f"<div class='hist-card'><span style='color:#00ff88; float:right;'>ROI: ₱{roi:,.2f}</span>CAPITAL: ₱{a['amount']:,.2f}</div>", unsafe_allow_html=True)
+        st.progress(prog)
+        if ph_now >= end:
+            if st.button(f"📥 PULL OUT ₱{roi:,.2f}", key=f"po_{idx}"):
+                data['wallet'] = wallet + roi
+                data.setdefault('history', []).append({"type": "PULL OUT", "amount": roi, "date": now_str, "status": "CONFIRMED"})
+                active.pop(len(active)-1-idx)
+                update_user(st.session_state.user, data); st.rerun()
+
+    st.markdown("### 📜 HISTORY")
+    for h in reversed(data.get('history', [])):
+        c = "#ffaa00" if h.get('status') == "PENDING" else "#00ff88"
+        st.markdown(f"**{h.get('type')}** | ₱{h.get('amount',0):,.2f} | {h.get('date')} | <span style='color:{c}'>{h.get('status')}</span>", unsafe_allow_html=True)
+
+# ==========================================
+# 5. LANDING & AUTH
+# ==========================================
 elif st.session_state.page == "auth":
-    params = st.query_params
-    url_ref = params.get("ref", "")
-    t1, t2 = st.tabs(["LOGIN", "REGISTER"])
-    with t2:
-        nu = st.text_input("FULL NAME").upper().strip()
-        np = st.text_input("PIN", type="password", max_chars=4)
-        # Auto-detects inviter from URL link
-        nr = st.text_input("INVITED BY", value=url_ref).upper().strip()
+    tab1, tab2 = st.tabs(["LOGIN", "REGISTER"])
+    with tab1:
+        u_log = st.text_input("FULL NAME").upper().strip()
+        p_log = st.text_input("PIN", type="password")
+        if st.button("ENTER ISMEX"):
+            reg = load_registry()
+            if u_log in reg and str(reg[u_log]['pin']) == str(p_log):
+                st.session_state.user = u_log; st.rerun()
+            else: st.error("Invalid Credentials")
+    with tab2:
+        inviter = st.session_state.get('captured_ref', 'OFFICIAL')
+        st.info(f"🤝 Invited by: {inviter}")
+        new_u = st.text_input("YOUR FULL NAME").upper().strip()
+        new_p = st.text_input("SET PIN", type="password", max_chars=4)
         if st.button("CREATE ACCOUNT"):
-            save(nu, {"pin":np, "wallet":0.0, "inv":[], "history":[], "pending":[], "ref_by":nr, "has_deposited":False})
-            st.success(f"Success! Welcome aboard.")
+            reg = load_registry()
+            if new_u in reg: st.error("NAME ALREADY REGISTERED!")
+            else:
+                update_user(new_u, {"pin": new_p, "wallet": 0.0, "ref_by": inviter, "inv": [], "history": [], "pending_actions": []})
+                st.success("Success!")
+    if st.button("← BACK"): st.session_state.page = "landing"; st.rerun()
+
 else:
     st.title("ISMEX PHILIPPINES 📊")
-    if st.button("🚀 GET STARTED"): st.session_state.page = "auth"; st.rerun()
-    if st.button("⛔") and st.text_input("Admin", type="password") == "0102030405":
-        st.session_state.is_boss = True; st.rerun()
-        
+    if st.button("🚀 PRESS HERE TO REGISTER OR LOG IN", use_container_width=True):
+        st.session_state.page = "auth"; st.rerun()
+    col_a, _ = st.columns([0.1, 0.9])
+    if col_a.button("🔒"): st.session_state.admin_mode = not st.session_state.admin_mode
+    if st.session_state.admin_mode:
+        if st.text_input("🔑", type="password") == "0102030405":
+            st.session_state.is_boss = True; st.rerun()
