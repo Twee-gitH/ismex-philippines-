@@ -215,17 +215,28 @@ elif st.session_state.user:
     ref_list, total_c = [], 0
     for n, i in reg.items():
         if i.get('ref_by') == st.session_state.user:
-            f_dep = i['inv'][0]['amount'] if i.get('inv') else 0
-            comm = f_dep * 0.30
-            total_c += comm
-            ref_list.append({"Name": n, "1st Deposit": f"₱{f_dep:,.2f}", "Comm": f"₱{comm:,.2f}"})
-    if ref_list:
-        st.table(ref_list)
-        if st.button("💸 REQUEST COMMISSION WITHDRAW"):
-            data.setdefault('pending_actions', []).append({"type": "COMM_WITHDRAW", "amount": total_c, "request_id": req_id})
-            data.setdefault('history', []).append({"type": "COMM_WITHDRAW", "amount": total_c, "date": now_str, "status": "PENDING", "request_id": req_id})
-            update_user(st.session_state.user, data); st.rerun()
-
+            def get_referral_data(username):
+    """Fetch only the investors recruited by this specific user."""
+    ref_list = []
+    total_comm = 0.0
+    
+    # This query is much faster and cheaper than .stream() on the whole collection
+    docs = db.collection("investors").where("ref_by", "==", username).stream()
+    
+    for doc in docs:
+        i = doc.to_dict()
+        n = doc.id
+        # Get the first deposit amount if it exists
+        f_dep = i['inv'][0]['amount'] if i.get('inv') and len(i['inv']) > 0 else 0
+        comm = f_dep * 0.30
+        total_comm += comm
+        ref_list.append({
+            "Name": n, 
+            "1st Deposit": f"₱{f_dep:,.2f}", 
+            "Comm": f"₱{comm:,.2f}"
+        })
+    return ref_list, total_comm
+    
     st.markdown("---")
     st.markdown("### 🚀 ACTIVE CAPITALS")
     active = data.get('inv', [])
