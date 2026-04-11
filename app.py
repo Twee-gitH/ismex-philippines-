@@ -273,7 +273,7 @@ elif st.session_state.user:
             st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("---")
-    st.subheader("👥 MY NETWORK")
+    st.subheader("My Referral Link")
     st.code(f"https://ismex-philippines-internationalstockmarketexchange.streamlit.app/?ref={st.session_state.user.replace(' ','+')}")
     net = [{"Name": n, "Deposit": f"₱{i['inv'][0]['amount']:,.2f}", "Comm": f"₱{i['inv'][0]['amount']*0.20:,.2f}"} for n, i in reg.items() if i.get('ref_by') == st.session_state.user and i.get('has_deposited')]
     if net: st.table(net)
@@ -300,13 +300,13 @@ elif st.session_state.page == "auth":
         inv_n = st.session_state.get('captured_ref', 'OFFICIAL')
         st.info(f"🤝 Invitor: **{inv_n}**")
         nu = st.text_input("FULL NAME").upper().strip()
-        np = st.text_input("PIN", type="password", max_chars=4)
+        np = st.text_input("PIN", type="password", max_chars=6)
         if st.button("REGISTER"):
             save(nu, {"pin":np, "wallet":0.0, "ref_by":inv_n, "inv":[], "history":[], "pending_actions":[], "has_deposited":False})
             st.success("Registered!")
             st.rerun()
 else:
-    st.title("ISMEX PHILIPPINES 📊")
+    st.title("ISMEX PHILIPPINES")
     if st.button("🚀 ENTER"): 
         st.session_state.page = "auth"
         st.rerun()
