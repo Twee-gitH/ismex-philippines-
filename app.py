@@ -119,15 +119,14 @@ if st.session_state.user:
                     st.session_state.action_type=None
                     st.rerun()
 
-                st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     
+    # Keeping your original repository name here
     base_url = "https://ismex-phil.github.io/ismex-philippines/" 
-    # This version keeps the link clean for the display box
     reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '%20')}"
     
     st.text_input("Link", value=reflink, label_visibility="collapsed")
     
-    # JavaScript Copy Logic (No more AttributeError)
     copy_js = f"""
         <script>
         function copyRef() {{
@@ -145,6 +144,7 @@ if st.session_state.user:
         </button>
     """
     st.components.v1.html(copy_js, height=60)
+                
 
 
         
