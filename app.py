@@ -127,7 +127,7 @@ elif st.session_state.user:
     st.markdown(f"<div class='balance-box'><h3>AVAILABLE BALANCE</h3><h1>₱{max(0.0, wallet):,.2f}</h1></div>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns(3)
-    if col1.button("📥 DEPOSIT"): st.session_state.action_type = "DEP"
+    if col1.button("📥 DEPOSIT To this gcash: 0927829297 t'***"g"): st.session_state.action_type = "DEP"
     if col2.button("📤 WITHDRAW"): st.session_state.action_type = "WIT"
     if col3.button("🔄 REINVEST"): st.session_state.action_type = "REI"
 
