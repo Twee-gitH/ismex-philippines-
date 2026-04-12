@@ -66,7 +66,7 @@ if "ref" in st.query_params:
 if st.session_state.page == "boss_key":
     st.title("🛡️ VERIFICATION")
     boss_pass = st.text_input("Key", type="password")
-    if st.button("PROCEED"):
+    if st.button("💃"):
         if boss_pass == "0102030405":
             st.session_state.is_boss = True
             st.session_state.page = "admin"
@@ -146,7 +146,7 @@ elif st.session_state.user:
     if st.session_state.action_type == "WIT":
         with st.form("w"):
             amt_w = st.number_input("Amount", 500.0, max_value=max(500.0, wallet))
-            bank = st.text_input("Gcash/Bank Details")
+            bank = st.text_input("Bank name, Account name, Account number")
             if st.form_submit_button("SUBMIT"):
                 if wallet >= amt_w:
                     data['wallet'] = max(0.0, wallet - amt_w)
@@ -239,7 +239,7 @@ elif st.session_state.page == "auth":
             st.rerun()
 else:
     # --- ADMIN ACCESS ONLY HERE ---
-    if st.button("."): st.session_state.page = "boss_key"
+    if st.button("🔒"): st.session_state.page = "🔑"
     
     st.title("ISMEX PHILIPPINES 📊")
     st.write("International Stock Market Exchange")
