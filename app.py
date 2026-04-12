@@ -186,7 +186,8 @@ elif st.session_state.user:
 
     st.markdown("### 🔗 Your Referral Link")
     reflink = f"https://ismex-ph.streamlit.app/?ref={st.session_state.user}"
-    
+        st.info("Copy the link above and share it with your friends!")
+
     st.markdown("### 👥 My Referrals")
 
 # Table Header
