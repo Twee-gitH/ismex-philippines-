@@ -83,7 +83,6 @@ if st.session_state.is_boss:
         st.rerun()
     
     reg = load_reg()
-    # ADDED: t3 for History view
     t1, t2, t3 = st.tabs(["📥 APPROVALS", "👥 MEMBERS", "📜 USER HISTORY"])
     
     with t1:
@@ -117,7 +116,6 @@ if st.session_state.is_boss:
         st.table([{"NAME": n, "PIN": i.get('pin'), "WALLET": i.get('wallet'), "REF": i.get('ref_by')} for n, i in reg.items()])
     
     with t3:
-        # LOGIC: Loop through all users to show transaction history
         for u_name, u_info in reg.items():
             u_hist = u_info.get('history', [])
             if u_hist:
@@ -190,45 +188,37 @@ elif st.session_state.user:
         </style>
         """, unsafe_allow_html=True)
 
-    st.markdown("<h4 style='margin-bottom:0px;'>👥 Referrals</h4>", unsafe_allow_html=True)
-    reflink = f"https://ismex-ph.streamlit.app/?ref={st.session_state.user}"
+    # FIXED: Old long link with "+" characters
+    st.markdown("<h4 style='margin-bottom:0px;'>🔗 Referral Link</h4>", unsafe_allow_html=True)
+    reflink = f"https://ismex-philippines-internationalstockmarketexchange.streamlit.app/?ref={st.session_state.user.replace(' ', '+')}"
     st.code(reflink, language="markdown")
 
-    st.markdown("### 👥 My Referrals")
+    # FIXED: Referral Table
+    st.markdown("<h4 style='margin-bottom:5px;'>👥 My Referrals</h4>", unsafe_allow_html=True)
     h1, h2, h3 = st.columns([2, 1.5, 1.5])
     h1.caption("INVESTOR")
     h2.caption("DEPOSIT")
     h3.caption("ACTION")
 
     my_refs = [name for name, info in reg.items() if info.get('ref_by') == st.session_state.user]
-    
     if my_refs:
         for ref_name in my_refs:
             ref_data = reg[ref_name]
             ref_invest = ref_data.get('inv', [])
             f_dep = ref_invest[0]['amount'] if ref_invest else 0
             comm = f_dep * 0.20
-            
-            # This container acts as a table row
             with st.container():
                 col1, col2, col3 = st.columns([2, 1.5, 1.5])
                 col1.markdown(f"<p style='font-size:12px; margin:0;'>{ref_name}</p>", unsafe_allow_html=True)
                 col2.markdown(f"<p style='font-size:12px; margin:0;'>₱{f_dep:,.0f}</p>", unsafe_allow_html=True)
-                
                 if f_dep > 0:
                     if col3.button(f"CLAIM ₱{comm:,.0f}", key=f"r_{ref_name}", use_container_width=True):
-                        data.setdefault('pending_actions', []).append({
-                            'type': 'Commission',
-                            'from': st.session_state.user,
-                            'amount': comm,
-                            'referral_name': ref_name,
-                            'status': 'Pending'
-                        })
+                        data.setdefault('pending_actions', []).append({'type': 'Commission','from': st.session_state.user,'amount': comm,'referral_name': ref_name,'status': 'Pending'})
                         save(st.session_state.user, data)
                         st.success("Sent!")
                 else:
                     col3.markdown("<p style='font-size:10px; color:gray; margin:0;'>No Dep.</p>", unsafe_allow_html=True)
-            st.markdown("<hr style='margin:2px 0;'>", unsafe_allow_html=True) # Very thin divider
+            st.markdown("<hr style='margin:2px 0;'>", unsafe_allow_html=True)
     else:
         st.caption("No referrals yet.")
 
@@ -238,7 +228,6 @@ elif st.session_state.user:
         end_dt = start_dt + timedelta(days=7)
         pull_out_end = end_dt + timedelta(hours=1)
         
-        # AUTO-REINVEST: Reset cycle if 1-hour window is missed
         if ph_now > pull_out_end:
             item['start_time'] = ph_now.isoformat()
             save(st.session_state.user, data)
@@ -280,9 +269,10 @@ elif st.session_state.user:
             save(st.session_state.user, data)
             st.rerun()
 
-    st.subheader("📜 MY HISTORY")
+    # FIXED: Clean History list (No boxes)
+    st.markdown("<h4 style='margin-top:20px;'>📜 My History</h4>", unsafe_allow_html=True)
     for h in reversed(data.get('history', [])):
-        st.markdown(f"<div class='hist-card'>{h['type']} | ₱{h['amount']:,.2f} | {h['status']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<p style='font-size:12px; margin:2px 0; color:#8b949e;'>• {h['type']} | ₱{h['amount']:,.2f} | <span style='color:#00ff88;'>{h['status']}</span></p>", unsafe_allow_html=True)
 
 elif st.session_state.page == "auth":
     t1, t2 = st.tabs(["LOGIN", "REGISTER"])
@@ -311,4 +301,4 @@ else:
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): 
         st.session_state.page = "auth"
         st.rerun()
-                
+    
