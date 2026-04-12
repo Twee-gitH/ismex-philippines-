@@ -119,18 +119,14 @@ if st.session_state.user:
                     st.session_state.action_type=None
                     st.rerun()
 
-            # Logic remains the same - updated with your actual GitHub username
+    # REFERRAL LINK SECTION (FIXED INDENTATION AND URL)
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     
-    # Updated to match the link you confirmed is working
-base_url = "https://twee-gith.github.io/ismex-philippines-/"
-reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '%20')}"
-
-    
+    base_url = "https://twee-gith.github.io/ismex-philippines-/"
+    reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '%20')}"
     
     st.text_input("Link", value=reflink, label_visibility="collapsed")
     
-    # JavaScript Copy Logic
     copy_js = f"""
         <script>
         function copyRef() {{
@@ -148,8 +144,6 @@ reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '%20')}"
         </button>
     """
     st.components.v1.html(copy_js, height=60)
-    
-    
 
     st.markdown("<h4 style='margin-bottom:5px;'>👥 My Referrals</h4>", unsafe_allow_html=True)
     h1, h2, h3 = st.columns([2, 1.5, 1.5])
@@ -219,16 +213,14 @@ reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '%20')}"
 # 4. NAVIGATION & PAGES (CLEAN ADMIN ENTRY)
 # ==========================================
 elif st.session_state.page == "boss_key":
-    # Removed Title and Cancel button
     boss_pass = st.text_input("Key", type="password", label_visibility="collapsed", placeholder="Enter Key")
-    
     if st.button("💃", use_container_width=True):
         if boss_pass == "0102030405":
             st.session_state.is_boss = True
             st.session_state.page = "admin"
             st.rerun()
         else:
-            st.session_state.page = "landing" # Auto-boot if wrong
+            st.session_state.page = "landing"
             st.rerun()
 
 elif st.session_state.page == "admin" and st.session_state.is_boss:
@@ -290,3 +282,4 @@ else:
     st.title("ISMEX PHILIPPINES")
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): st.session_state.page = "auth"; st.rerun()
     if st.button("🔒"): st.session_state.page = "boss_key"; st.rerun()
+    
