@@ -122,9 +122,9 @@ if st.session_state.user:
             # Logic remains the same - updated with your actual GitHub username
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     
-    # Updated to match your username Twee-gitH
-    base_url = "https://twee-gith.github.io/ismex-philippines/" 
-    reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '%20')}"
+    # Added the dash (-) at the end to match your working link
+base_url = "https://twee-gith.github.io/ismex-philippines-/" 
+    
     
     st.text_input("Link", value=reflink, label_visibility="collapsed")
     
