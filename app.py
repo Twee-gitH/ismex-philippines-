@@ -61,73 +61,9 @@ if "ref" in st.query_params:
     st.session_state["captured_ref"] = st.query_params["ref"].replace("+", " ").upper().strip()
 
 # ==========================================
-# 3. ADMIN ACCESS & APPROVAL LOGIC
+# 3. USER DASHBOARD & TRANSACTION LOGIC
 # ==========================================
-if st.session_state.page == "boss_key":
-    st.title("🛡️ VERIFICATION")
-    boss_pass = st.text_input("Key", type="password")
-    if st.button("💃"):
-        if boss_pass == "0102030405":
-            st.session_state.is_boss = True
-            st.session_state.page = "admin"
-            st.rerun()
-    if st.button("CANCEL"): 
-        st.session_state.page = "landing"
-        st.rerun()
-
-if st.session_state.is_boss:
-    st.title("👑 ADMIN")
-    if st.button("EXIT"): 
-        st.session_state.is_boss = False
-        st.session_state.page = "landing"
-        st.rerun()
-    
-    reg = load_reg()
-    t1, t2, t3 = st.tabs(["📥 APPROVALS", "👥 MEMBERS", "📜 USER HISTORY"])
-    
-    with t1:
-        for u, u_data in reg.items():
-            pend = u_data.get('pending_actions', [])
-            for idx, act in enumerate(list(pend)):
-                with st.expander(f"{act['type']} - {u} (₱{act.get('amount',0):,.2f})"):
-                    c1, c2 = st.columns(2)
-                    if c1.button("APPROVE", key=f"ap_{u}_{idx}"):
-                        ph = datetime.now() + timedelta(hours=8)
-                        if act['type'] == "DEPOSIT" and not u_data.get('has_deposited'):
-                            inv = u_data.get('ref_by', 'OFFICIAL')
-                            if inv in reg:
-                                reg[inv]['wallet'] = reg[inv].get('wallet', 0) + (act['amount'] * 0.20)
-                                save(inv, reg[inv])
-                            u_data['has_deposited'] = True
-                        if act['type'] in ["DEPOSIT", "REINVEST"]:
-                            u_data.setdefault('inv', []).append({"amount": act['amount'], "start_time": ph.isoformat()})
-                        for h in u_data.get('history', []):
-                            if h.get('request_id') == act.get('request_id'): h['status'] = "CONFIRMED"
-                        u_data['pending_actions'].pop(idx)
-                        save(u, u_data)
-                        st.rerun()
-                    if c2.button("REJECT", key=f"rj_{u}_{idx}"):
-                        if act['type'] in ["WITHDRAW", "REINVEST"]: 
-                            u_data['wallet'] = u_data.get('wallet',0) + act['amount']
-                        u_data['pending_actions'].pop(idx)
-                        save(u, u_data)
-                        st.rerun()
-    with t2:
-        st.table([{"NAME": n, "PIN": i.get('pin'), "WALLET": i.get('wallet'), "REF": i.get('ref_by')} for n, i in reg.items()])
-    
-    with t3:
-        for u_name, u_info in reg.items():
-            u_hist = u_info.get('history', [])
-            if u_hist:
-                st.markdown(f"**Investor: {u_name}**")
-                for h in reversed(u_hist):
-                    st.write(f"﹂ {h['type']} | ₱{h['amount']:,.2f} | {h['status']} | {h.get('date','')}")
-                st.markdown("---")
-
-# ==========================================
-# 4. USER DASHBOARD & TRANSACTION LOGIC
-# ==========================================
-elif st.session_state.user:
+if st.session_state.user:
     reg = load_reg()
     data = reg.get(st.session_state.user, {})
     wallet = float(data.get('wallet', 0.0))
@@ -160,31 +96,16 @@ elif st.session_state.user:
         with st.form("w"):
             amt_w = st.number_input("Amount", min_value=1000.0, value=1000.0)
             bank = st.text_input("Bank name, Account name, Account#")
-            
             if st.form_submit_button("SUBMIT"):
                 if wallet >= amt_w:
                     data['wallet'] = max(0.0, wallet - amt_w)
-                    data.setdefault('pending_actions', []).append({
-                        "type":"WITHDRAW", 
-                        "amount":amt_w, 
-                        "request_id":req_id, 
-                        "details":bank
-                    })
-                    data.setdefault('history', []).append({
-                        "type":"WITHDRAW", 
-                        "amount":amt_w, 
-                        "status":"PENDING", 
-                        "request_id":req_id, 
-                        "date":ph_now.strftime("%Y-%m-%d")
-                    })
+                    data.setdefault('pending_actions', []).append({"type":"WITHDRAW", "amount":amt_w, "request_id":req_id, "details":bank})
+                    data.setdefault('history', []).append({"type":"WITHDRAW", "amount":amt_w, "status":"PENDING", "request_id":req_id, "date":ph_now.strftime("%Y-%m-%d")})
                     save(st.session_state.user, data)
-                    st.success("Withdrawal Request Submitted!")
-                    time.sleep(1)
-                    st.session_state.action_type = None
-                    st.rerun()
+                    st.success("Submitted!")
+                    time.sleep(1); st.session_state.action_type=None; st.rerun()
                 else:
-                    st.error(f"Insufficient Balance! Your wallet only has ₱{wallet:,.2f}")
-            
+                    st.error(f"Insufficient Balance! (₱{wallet:,.2f})")
 
     if st.session_state.action_type == "REINVEST":
         with st.form("r"):
@@ -199,23 +120,15 @@ elif st.session_state.user:
                     st.rerun()
 
     st.markdown("---")
-    st.markdown("""
-        <style>
-        .stButton > button { font-size: 8px !important; height: 25px !important; min-height: 25px !important; }
-        </style>
-        """, unsafe_allow_html=True)
+    st.markdown("""<style>.stButton > button { font-size: 8px !important; height: 25px !important; min-height: 25px !important; }</style>""", unsafe_allow_html=True)
 
-    # FIXED: Old long link with "+" characters
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 Referral Link</h4>", unsafe_allow_html=True)
     reflink = f"https://ismex-philippines-internationalstockmarketexchange.streamlit.app/?ref={st.session_state.user.replace(' ', '+')}"
     st.code(reflink, language="markdown")
 
-    # FIXED: Referral Table
     st.markdown("<h4 style='margin-bottom:5px;'>👥 My Referrals</h4>", unsafe_allow_html=True)
     h1, h2, h3 = st.columns([2, 1.5, 1.5])
-    h1.caption("INVESTOR")
-    h2.caption("DEPOSIT")
-    h3.caption("ACTION")
+    h1.caption("INVESTOR"); h2.caption("DEPOSIT"); h3.caption("ACTION")
 
     my_refs = [name for name, info in reg.items() if info.get('ref_by') == st.session_state.user]
     if my_refs:
@@ -236,19 +149,14 @@ elif st.session_state.user:
                 else:
                     col3.markdown("<p style='font-size:10px; color:gray; margin:0;'>No Dep.</p>", unsafe_allow_html=True)
             st.markdown("<hr style='margin:2px 0;'>", unsafe_allow_html=True)
-    else:
-        st.caption("No referrals yet.")
 
     st.subheader("🚀 RUNNING CAPITALS")
     for idx, item in enumerate(list(data.get('inv', []))):
         start_dt = datetime.fromisoformat(item['start_time'])
         end_dt = start_dt + timedelta(days=7)
         pull_out_end = end_dt + timedelta(hours=1)
-        
         if ph_now > pull_out_end:
-            item['start_time'] = ph_now.isoformat()
-            save(st.session_state.user, data)
-            st.rerun()
+            item['start_time'] = ph_now.isoformat(); save(st.session_state.user, data); st.rerun()
 
         elapsed = (ph_now - start_dt).total_seconds()
         progress = min(1.0, elapsed / 604800)
@@ -273,27 +181,63 @@ elif st.session_state.user:
         
         is_op = end_dt <= ph_now <= pull_out_end
         ca, cb = st.columns(2)
-        
         if ca.button(f"press here to CLAIM INTEREST on schedule", key=f"interest_{idx}", disabled=not is_op, use_container_width=True):
-            data['wallet'] = data.get('wallet', 0) + roi_total
-            item['start_time'] = ph_now.isoformat()
-            save(st.session_state.user, data)
-            st.rerun()
-            
+            data['wallet'] += roi_total; item['start_time'] = ph_now.isoformat(); save(st.session_state.user, data); st.rerun()
         if cb.button(f"press here to PULL OUT CAPITAL on schedule", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
-            data['wallet'] = data.get('wallet', 0) + (item['amount'] + roi_total)
-            data['inv'].pop(idx)
-            save(st.session_state.user, data)
-            st.rerun()
+            data['wallet'] += (item['amount'] + roi_total); data['inv'].pop(idx); save(st.session_state.user, data); st.rerun()
 
-    # FIXED: Clean History list (No boxes)
     st.markdown("<h4 style='margin-top:20px;'>📜 My History</h4>", unsafe_allow_html=True)
     for h in reversed(data.get('history', [])):
         st.markdown(f"<p style='font-size:12px; margin:2px 0; color:#8b949e;'>• {h['type']} | ₱{h['amount']:,.2f} | <span style='color:#00ff88;'>{h['status']}</span></p>", unsafe_allow_html=True)
 
 # ==========================================
-# 5. NAVIGATION & LANDING (FIXED)
+# 4. NAVIGATION & PAGES (FIXED NO OVERLAP)
 # ==========================================
+elif st.session_state.page == "boss_key":
+    st.title("🛡️ VERIFICATION")
+    boss_pass = st.text_input("Key", type="password")
+    if st.button("💃"):
+        if boss_pass == "0102030405":
+            st.session_state.is_boss = True; st.session_state.page = "admin"; st.rerun()
+    if st.button("CANCEL"): st.session_state.page = "landing"; st.rerun()
+
+elif st.session_state.page == "admin" and st.session_state.is_boss:
+    st.title("👑 ADMIN")
+    if st.button("EXIT"): st.session_state.is_boss = False; st.session_state.page = "landing"; st.rerun()
+    reg = load_reg()
+    t1, t2, t3 = st.tabs(["📥 APPROVALS", "👥 MEMBERS", "📜 HISTORY"])
+    with t1:
+        for u, u_data in reg.items():
+            pend = u_data.get('pending_actions', [])
+            for idx, act in enumerate(list(pend)):
+                with st.expander(f"{act['type']} - {u} (₱{act.get('amount',0):,.2f})"):
+                    c1, c2 = st.columns(2)
+                    if c1.button("APPROVE", key=f"ap_{u}_{idx}"):
+                        ph = datetime.now() + timedelta(hours=8)
+                        if act['type'] == "DEPOSIT" and not u_data.get('has_deposited'):
+                            inv = u_data.get('ref_by', 'OFFICIAL')
+                            if inv in reg:
+                                reg[inv]['wallet'] = reg[inv].get('wallet', 0) + (act['amount'] * 0.20)
+                                save(inv, reg[inv])
+                            u_data['has_deposited'] = True
+                        if act['type'] in ["DEPOSIT", "REINVEST"]:
+                            u_data.setdefault('inv', []).append({"amount": act['amount'], "start_time": ph.isoformat()})
+                        for h in u_data.get('history', []):
+                            if h.get('request_id') == act.get('request_id'): h['status'] = "CONFIRMED"
+                        u_data['pending_actions'].pop(idx); save(u, u_data); st.rerun()
+                    if c2.button("REJECT", key=f"rj_{u}_{idx}"):
+                        if act['type'] in ["WITHDRAW", "REINVEST"]: u_data['wallet'] += act['amount']
+                        u_data['pending_actions'].pop(idx); save(u, u_data); st.rerun()
+    with t2:
+        st.table([{"NAME": n, "PIN": i.get('pin'), "WALLET": i.get('wallet'), "REF": i.get('ref_by')} for n, i in reg.items()])
+    with t3:
+        for u_n, u_i in reg.items():
+            u_h = u_i.get('history', [])
+            if u_h:
+                st.markdown(f"**Investor: {u_n}**")
+                for h in reversed(u_h): st.write(f"﹂ {h['type']} | ₱{h['amount']:,.2f} | {h['status']}")
+                st.markdown("---")
+
 elif st.session_state.page == "auth":
     t1, t2 = st.tabs(["LOGIN", "REGISTER"])
     with t1:
@@ -301,34 +245,18 @@ elif st.session_state.page == "auth":
         p = st.text_input("PIN", type="password")
         if st.button("GO"):
             r = load_reg()
-            if u in r and str(r[u].get('pin')) == p: 
-                st.session_state.user = u
-                st.rerun()
+            if u in r and str(r[u].get('pin')) == p: st.session_state.user = u; st.rerun()
     with t2:
         inv_n = st.session_state.get('captured_ref', 'OFFICIAL')
         st.write(f"Invitor: {inv_n}")
-        nu = st.text_input("Name", placeholder="1stname middlename lastname").upper().strip()
+        nu = st.text_input("Full Name").upper().strip()
         np = st.text_input("PIN (6 digits)", type="password", max_chars=6)
         if st.button("CREATE"):
             if nu and len(np) == 6:
                 save(nu, {"pin":np, "wallet":0.0, "ref_by":inv_n, "inv":[], "history":[], "pending_actions":[], "has_deposited":False})
-                st.success("Created!")
-                time.sleep(1)
-                st.rerun()
+                st.success("Done!"); time.sleep(1); st.rerun()
 
-# THIS BLOCK ONLY SHOWS ON THE MAIN LANDING PAGE
-elif st.session_state.page == "landing":
-    st.title("ISMEX PHILIPPINES")
-    if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): 
-        st.session_state.page = "auth"
-        st.rerun()
-    if st.button("🔒 Admin"): 
-        st.session_state.page = "boss_key"
-        st.rerun()
-
-# FINAL CATCH-ALL
 else:
-    st.session_state.page = "landing"
-    st.rerun()
-        
-        
+    st.title("ISMEX PHILIPPINES")
+    if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): st.session_state.page = "auth"; st.rerun()
+    if st.button("🔒"): st.session_state.page = "boss_key"; st.rerun()
