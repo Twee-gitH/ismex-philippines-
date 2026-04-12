@@ -156,18 +156,35 @@ elif st.session_state.user:
                 st.session_state.action_type=None
                 st.rerun()
 
-    if st.session_state.action_type == "WITHDRAW BALANCE":
+        if st.session_state.action_type == "WITHDRAW BALANCE":
         with st.form("w"):
-            amt_w = st.number_input("Amount", 1000.0, max_value=max(1000000.0, wallet))
+            amt_w = st.number_input("Amount", min_value=1000.0, value=1000.0)
             bank = st.text_input("Bank name, Account name, Account#")
+            
             if st.form_submit_button("SUBMIT"):
                 if wallet >= amt_w:
                     data['wallet'] = max(0.0, wallet - amt_w)
-                    data.setdefault('pending_actions', []).append({"type":"WITHDRAW", "amount":amt_w, "request_id":req_id, "details":bank})
-                    data.setdefault('history', []).append({"type":"WITHDRAW", "amount":amt_w, "status":"PENDING", "request_id":req_id, "date":ph_now.strftime("%Y-%m-%d")})
+                    data.setdefault('pending_actions', []).append({
+                        "type":"WITHDRAW", 
+                        "amount":amt_w, 
+                        "request_id":req_id, 
+                        "details":bank
+                    })
+                    data.setdefault('history', []).append({
+                        "type":"WITHDRAW", 
+                        "amount":amt_w, 
+                        "status":"PENDING", 
+                        "request_id":req_id, 
+                        "date":ph_now.strftime("%Y-%m-%d")
+                    })
                     save(st.session_state.user, data)
-                    st.session_state.action_type=None
+                    st.success("Withdrawal Request Submitted!")
+                    time.sleep(1)
+                    st.session_state.action_type = None
                     st.rerun()
+                else:
+                    st.error(f"Insufficient Balance! Your wallet only has ₱{wallet:,.2f}")
+            
 
     if st.session_state.action_type == "REINVEST":
         with st.form("r"):
