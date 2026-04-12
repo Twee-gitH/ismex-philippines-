@@ -5,20 +5,16 @@ from datetime import datetime, timedelta
 import time
 
 # ==========================================
-# 1. UI CONFIGURATION & STYLING
+# 1. UI CONFIGURATION
 # ==========================================
 st.set_page_config(
     page_title="ISMEX Official", 
     layout="wide"
 )
 
+# CLEAN CSS - NO SHIELDS, NO HIDDEN OVERLAYS
 st.markdown("""
     <style>
-    header, [data-testid="stToolbar"], footer { 
-        visibility: hidden !important; 
-        display: none !important; 
-    }
-    
     .stApp { 
         background-color: #0e1117 !important; 
         color: white; 
@@ -26,15 +22,10 @@ st.markdown("""
     
     /* DISCREET ADMIN BUTTON */
     .stButton>button[kind="secondary"] {
-        position: fixed; 
-        top: 0; 
-        left: 0;
         background: transparent !important; 
         border: none !important;
-        color: rgba(255,255,255,0.01) !important; 
-        z-index: 99999; 
-        width: 30px; 
-        height: 30px;
+        color: rgba(255,255,255,0.1) !important; 
+        font-size: 10px; 
     }
     
     .balance-box {
@@ -43,6 +34,7 @@ st.markdown("""
         border-radius: 20px; 
         border: 2px solid #00ff88;
         text-align: center;
+        margin-bottom: 20px;
     }
     
     .cap-card {
@@ -61,20 +53,19 @@ st.markdown("""
         border-left: 5px solid #00ff88;
     }
     
-    /* FORCE CONTENT TO TOP */
+    /* STANDARD MOBILE PADDING */
     .main .block-container { 
-        padding-top: 1rem !important;
-        padding-bottom: 2rem !important; 
+        padding: 1rem !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
 # THE SECRET DOOR
-if st.button("."): 
+if st.button(". ", kind="secondary"): 
     st.session_state.page = "boss_key"
 
 # ==========================================
-# 2. DATABASE & STATE MANAGEMENT
+# 2. DATABASE & STATE
 # ==========================================
 @st.cache_resource
 def get_db():
@@ -102,11 +93,11 @@ if "ref" in st.query_params:
     st.session_state["captured_ref"] = st.query_params["ref"].replace("+", " ").upper().strip()
 
 # ==========================================
-# 3. BOSS KEY & ADMIN DASHBOARD
+# 3. ADMIN ACCESS
 # ==========================================
 if st.session_state.page == "boss_key":
-    st.title("🛡️ SECURITY VERIFICATION")
-    boss_pass = st.text_input("Enter Management Key", type="password")
+    st.title("🛡️ VERIFICATION")
+    boss_pass = st.text_input("Key", type="password")
     
     if st.button("PROCEED"):
         if boss_pass == "0102030405":
@@ -119,20 +110,20 @@ if st.session_state.page == "boss_key":
         st.rerun()
 
 if st.session_state.is_boss:
-    st.title("👑 ADMIN COMMAND CENTER")
-    if st.button("EXIT ADMIN"): 
+    st.title("👑 ADMIN")
+    if st.button("EXIT"): 
         st.session_state.is_boss = False
         st.session_state.page = "landing"
         st.rerun()
     
     reg = load_reg()
-    t1, t2 = st.tabs(["📥 APPROVALS", "👥 MEMBER OVERSIGHT"])
+    t1, t2 = st.tabs(["📥 APPROVALS", "👥 MEMBERS"])
     
     with t1:
         for u, u_data in reg.items():
             pend = u_data.get('pending_actions', [])
             for idx, act in enumerate(list(pend)):
-                with st.expander(f"{act['type']} - {u} (₱{act.get('amount',0):,.2f})"):
+                with st.expander(f"{act['type']} - {u}"):
                     c1, c2 = st.columns(2)
                     if c1.button("APPROVE", key=f"ap_{u}_{idx}"):
                         ph = datetime.now() + timedelta(hours=8)
@@ -156,13 +147,10 @@ if st.session_state.is_boss:
                         save(u, u_data)
                         st.rerun()
     with t2:
-        st.table([{"NAME": n, "PIN": i.get('pin'), "WALLET": i.get('wallet'), "REF": i.get('ref_by')} for n, i in reg.items()])
-        sel = st.selectbox("Audit History Log", list(reg.keys()))
-        if sel: 
-            st.json(reg[sel].get('history', []))
+        st.table([{"NAME": n, "PIN": i.get('pin'), "WALLET": i.get('wallet')} for n, i in reg.items()])
 
 # ==========================================
-# 4. USER TRADING DASHBOARD
+# 4. USER DASHBOARD
 # ==========================================
 elif st.session_state.user:
     reg = load_reg()
@@ -171,12 +159,12 @@ elif st.session_state.user:
     ph_now = datetime.now() + timedelta(hours=8)
     req_id = ph_now.strftime("%f")
 
-    st.markdown(f"<div class='balance-box'><h3>AVAILABLE BALANCE</h3><h1>₱{max(0.0, wallet):,.2f}</h1></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='balance-box'><h3>BALANCE</h3><h1>₱{max(0.0, wallet):,.2f}</h1></div>", unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns(3)
-    if col1.button("📥 DEPOSIT"): st.session_state.action_type = "DEP"
-    if col2.button("📤 WITHDRAW"): st.session_state.action_type = "WIT"
-    if col3.button("🔄 REINVEST"): st.session_state.action_type = "REI"
+    c1, c2, c3 = st.columns(3)
+    if c1.button("📥 DEP"): st.session_state.action_type = "DEP"
+    if c2.button("📤 WIT"): st.session_state.action_type = "WIT"
+    if c3.button("🔄 REI"): st.session_state.action_type = "REI"
 
     if st.session_state.action_type == "DEP":
         with st.form("d"):
@@ -192,7 +180,7 @@ elif st.session_state.user:
     if st.session_state.action_type == "WIT":
         with st.form("w"):
             amt_w = st.number_input("Amount", 500.0, max_value=max(500.0, wallet))
-            bank = st.text_input("Bank/GCash Details")
+            bank = st.text_input("Details")
             if st.form_submit_button("SUBMIT"):
                 if wallet >= amt_w:
                     data['wallet'] = max(0.0, wallet - amt_w)
@@ -204,7 +192,7 @@ elif st.session_state.user:
 
     if st.session_state.action_type == "REI":
         with st.form("r"):
-            amt_r = st.number_input("Reinvest Amount", 0.0, max_value=max(0.0, wallet))
+            amt_r = st.number_input("Reinvest", 0.0, max_value=max(0.0, wallet))
             if st.form_submit_button("CONFIRM"):
                 if wallet >= amt_r and amt_r > 0:
                     data['wallet'] = max(0.0, wallet - amt_r)
@@ -215,7 +203,7 @@ elif st.session_state.user:
                     st.rerun()
 
     st.markdown("---")
-    st.subheader("🚀 LIVE RUNNING CAPITALS")
+    st.subheader("🚀 CAPITALS")
     active_inv = data.get('inv', [])
     for idx, item in enumerate(list(active_inv)):
         start_dt = datetime.fromisoformat(item['start_time'])
@@ -237,20 +225,19 @@ elif st.session_state.user:
             st.markdown("<div class='cap-card'>", unsafe_allow_html=True)
             ca, cb = st.columns([2, 1])
             with ca:
-                st.write(f"**Capital:** ₱{item['amount']:,.2f} | **Live ROI:** ₱{live_roi:,.2f}")
+                st.write(f"₱{item['amount']:,.2f} | ROI: ₱{live_roi:,.2f}")
                 st.progress(progress)
             with cb:
                 is_op = end_dt <= ph_now <= expiry_dt
                 if ph_now < end_dt:
                     diff = end_dt - ph_now
-                    st.caption(f"🔒 {diff.days}d {diff.seconds//3600}h {(diff.seconds//60)%60}m")
-                elif is_op: st.success("🔓 OPEN")
-                if st.button(f"Claim ROI (₱{roi_total:,.2f})", key=f"r_{idx}", disabled=not is_op):
+                    st.caption(f"{diff.days}d {diff.seconds//3600}h left")
+                if st.button(f"CLAIM", key=f"r_{idx}", disabled=not is_op):
                     data['wallet'] += roi_total
                     item['start_time'] = ph_now.isoformat()
                     save(st.session_state.user, data)
                     st.rerun()
-                if st.button(f"Withdraw Capital", key=f"c_{idx}", disabled=not is_op):
+                if st.button(f"EXIT", key=f"c_{idx}", disabled=not is_op):
                     data['wallet'] += item['amount']
                     data['inv'].pop(idx)
                     save(st.session_state.user, data)
@@ -258,15 +245,8 @@ elif st.session_state.user:
             st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("---")
-    st.subheader("👥 MY NETWORK")
-    st.code(f"https://ismex-philippines-internationalstockmarketexchange.streamlit.app/?ref={st.session_state.user.replace(' ','+')}")
-    net = [{"Name": n, "Deposit": f"₱{i['inv'][0]['amount']:,.2f}", "Comm": f"₱{i['inv'][0]['amount']*0.20:,.2f}"} for n, i in reg.items() if i.get('ref_by') == st.session_state.user and i.get('has_deposited')]
-    if net: st.table(net)
-
-    st.subheader("📜 HISTORY")
-    for h in reversed(data.get('history', [])):
-        st.markdown(f"<div class='hist-card'><b>{h['type']}</b> | ₱{h['amount']:,.2f} | {h['status']} | {h.get('date','')}</div>", unsafe_allow_html=True)
-
+    st.code(f"Ref: {st.session_state.user}")
+    
     if st.button("LOGOUT"): 
         st.session_state.user = None
         st.rerun()
@@ -276,29 +256,32 @@ elif st.session_state.page == "auth":
     with t1:
         u = st.text_input("NAME").upper().strip()
         p = st.text_input("PIN", type="password")
-        if st.button("LOGIN"):
+        if st.button("GO"):
             r = load_reg()
             if u in r and str(r[u]['pin']) == p: 
                 st.session_state.user = u
                 st.rerun()
     with t2:
         inv_n = st.session_state.get('captured_ref', 'OFFICIAL')
-        st.info(f"🤝 Invitor: **{inv_n}**")
+        st.write(f"Invitor: {inv_n}")
         nu = st.text_input("FULL NAME").upper().strip()
-        np = st.text_input("PIN", type="password", max_chars=4)
-        if st.button("REGISTER"):
+        np = st.text_input("PIN (4 digits)", type="password", max_chars=4)
+        if st.button("CREATE"):
             save(nu, {"pin":np, "wallet":0.0, "ref_by":inv_n, "inv":[], "history":[], "pending_actions":[], "has_deposited":False})
-            st.success("Registered!")
+            st.success("Done!")
             st.rerun()
 else:
-    # --- CENTERING CONTAINER FOR MOBILE ---
+    # --- SIMPLE LANDING ---
     st.title("ISMEX PHILIPPINES 📊")
-    st.write("Welcome to the International Stock Market Exchange")
-    # THE ACTION BUTTON IS NOW HERE
-    if st.button("🚀 CLICK HERE TO ENTER PLATFORM"): 
+    st.subheader("International Stock Market Exchange")
+    st.write("Secure Trading Platform")
+    
+    # LARGE CLEAR BUTTON
+    if st.button("🚀 ENTER PLATFORM NOW", use_container_width=True): 
         st.session_state.page = "auth"
         st.rerun()
-    # ADDED PADDING TO ENSURE VISIBILITY
+    
     st.write("")
     st.write("")
-                  
+    st.caption("v4.0 Mobile Optimized")
+    
