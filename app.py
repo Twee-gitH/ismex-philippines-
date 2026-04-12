@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import time
 
 # ==========================================
-# 1. UI & SECURE SHIELD
+# 1. UI CONFIGURATION & STYLING
 # ==========================================
 st.set_page_config(
     page_title="ISMEX Official", 
@@ -14,16 +14,18 @@ st.set_page_config(
 
 st.markdown("""
     <style>
+    /* HIDE TOP OVERLAYS */
     header, [data-testid="stToolbar"], footer { 
         visibility: hidden !important; 
         display: none !important; 
     }
+    
     .stApp { 
         background-color: #0e1117 !important; 
         color: white; 
     }
     
-    /* DISCREET ADMIN BUTTON */
+    /* DISCREET ADMIN BUTTON - TOP LEFT */
     .stButton>button[kind="secondary"] {
         position: fixed; 
         top: 0; 
@@ -32,9 +34,9 @@ st.markdown("""
         border: none !important;
         color: rgba(255,255,255,0.01) !important; 
         font-size: 5px; 
-        z-index: 9999999; 
-        width: 15px; 
-        height: 15px;
+        z-index: 99999; 
+        width: 20px; 
+        height: 20px;
     }
     
     .balance-box {
@@ -62,9 +64,10 @@ st.markdown("""
         border-left: 5px solid #00ff88;
     }
     
+    /* PADDING ADJUSTED FOR VISIBILITY */
     .main .block-container { 
-        padding-top: 2rem !important;
-        padding-bottom: 400px !important; 
+        padding-top: 3rem !important;
+        padding-bottom: 5rem !important; 
     }
     </style>
     """, unsafe_allow_html=True)
@@ -73,27 +76,10 @@ st.markdown("""
 if st.button("."): 
     st.session_state.page = "boss_key"
 
-st.components.v1.html("""
-    <script>
-    const shield = () => {
-        const p = window.parent.document;
-        const badge = p.querySelector('.viewerBadge_container__1QSob');
-        if (badge) { badge.style.display = 'none'; badge.style.visibility = 'hidden'; }
-        
-        let s = p.getElementById('ismex-shield');
-        if (!s) {
-            s = p.createElement('div');
-            s.id = 'ismex-shield';
-            s.style.cssText = 'position:fixed;bottom:0;left:0;width:100vw;height:120px;background:#0e1117;z-index:2147483647;pointer-events:none;';
-            p.body.appendChild(s);
-        }
-    };
-    setInterval(shield, 10); 
-    </script>
-    """, height=0)
+# SHIELD REMOVED AS PER REQUEST - UI NOW FLOWS NATURALLY
 
 # ==========================================
-# 2. DATABASE & STATE
+# 2. DATABASE & STATE MANAGEMENT
 # ==========================================
 @st.cache_resource
 def get_db():
@@ -121,16 +107,18 @@ if "ref" in st.query_params:
     st.session_state["captured_ref"] = st.query_params["ref"].replace("+", " ").upper().strip()
 
 # ==========================================
-# 3. BOSS KEY & ADMIN
+# 3. BOSS KEY & ADMIN DASHBOARD
 # ==========================================
 if st.session_state.page == "boss_key":
     st.title("🛡️ SECURITY VERIFICATION")
     boss_pass = st.text_input("Enter Management Key", type="password")
+    
     if st.button("PROCEED"):
         if boss_pass == "0102030405":
             st.session_state.is_boss = True
             st.session_state.page = "admin"
             st.rerun()
+            
     if st.button("CANCEL"): 
         st.session_state.page = "landing"
         st.rerun()
@@ -179,7 +167,7 @@ if st.session_state.is_boss:
             st.json(reg[sel].get('history', []))
 
 # ==========================================
-# 4. USER DASHBOARD
+# 4. USER TRADING DASHBOARD
 # ==========================================
 elif st.session_state.user:
     reg = load_reg()
@@ -309,7 +297,7 @@ elif st.session_state.page == "auth":
             st.rerun()
 else:
     st.title("ISMEX PHILIPPINES 📊")
-    st.write("") # Added spacing for vertical push
+    st.markdown("### Welcome to the International Stock Market Exchange")
     if st.button("🚀 ENTER"): 
         st.session_state.page = "auth"
         st.rerun()
