@@ -30,8 +30,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# ADMIN BUTTON REMOVED FROM GLOBAL SCOPE TO PREVENT DASHBOARD LEAK
-
 # ==========================================
 # 2. DATABASE & STATE
 # ==========================================
@@ -173,7 +171,6 @@ elif st.session_state.user:
                     st.rerun()
 
     st.markdown("---")
-    for     
     st.subheader("🚀 RUNNING CAPITALS")
     for idx, item in enumerate(list(data.get('inv', []))):
         start_dt = datetime.fromisoformat(item['start_time'])
@@ -185,7 +182,6 @@ elif st.session_state.user:
         roi_total = item['amount'] * 0.20
         live_profit = progress * roi_total
 
-        # Exact layout from your screenshot
         st.markdown(f"""
         <div style="background-color: #1c2128; padding: 15px; border-radius: 10px; border-left: 5px solid #00ff88; margin-bottom: 10px;">
             <div style="display: flex; justify-content: space-between;">
@@ -215,13 +211,9 @@ elif st.session_state.user:
             save(st.session_state.user, data)
             st.rerun()
 
-            st.markdown("</div>", unsafe_allow_html=True)
-
     st.subheader("📜 HISTORY")
     for h in reversed(data.get('history', [])):
         st.markdown(f"<div class='hist-card'>{h['type']} | ₱{h['amount']:,.2f} | {h['status']}</div>", unsafe_allow_html=True)
-
- 
 
 elif st.session_state.page == "auth":
     t1, t2 = st.tabs(["LOGIN", "REGISTER"])
@@ -243,13 +235,15 @@ elif st.session_state.page == "auth":
             st.success("Done!")
             st.rerun()
 else:
-    # --- ADMIN ACCESS ONLY HERE ---
-    if st.button("🔒"): st.session_state.page = "🔑"
+    # --- ADMIN ACCESS POINT FIXED ---
+    if st.button("🔒"): 
+        st.session_state.page = "boss_key"
+        st.rerun()
     
-    st.title("ISMEX PHILIPPINES 📊")
+    st.title("ISMEX PHILIPPINES")
     st.write("International Stock Market Exchange")
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): 
         st.session_state.page = "auth"
         st.rerun()
     st.caption("Secure v5.0")
-                                
+                            
