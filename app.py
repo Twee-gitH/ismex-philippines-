@@ -292,11 +292,10 @@ elif st.session_state.user:
         st.markdown(f"<p style='font-size:12px; margin:2px 0; color:#8b949e;'>• {h['type']} | ₱{h['amount']:,.2f} | <span style='color:#00ff88;'>{h['status']}</span></p>", unsafe_allow_html=True)
 
 # ==========================================
-# 5. NAVIGATION LOGIC (FIXED)
+# 5. NAVIGATION & LANDING (FIXED)
 # ==========================================
 elif st.session_state.page == "auth":
     t1, t2 = st.tabs(["LOGIN", "REGISTER"])
-    
     with t1:
         u = st.text_input("NAME").upper().strip()
         p = st.text_input("PIN", type="password")
@@ -305,43 +304,31 @@ elif st.session_state.page == "auth":
             if u in r and str(r[u].get('pin')) == p: 
                 st.session_state.user = u
                 st.rerun()
-            else:
-                st.error("Invalid Credentials")
-
     with t2:
         inv_n = st.session_state.get('captured_ref', 'OFFICIAL')
         st.write(f"Invitor: {inv_n}")
-        nu = st.text_input("Full Name", placeholder="1stname middlename lastname").upper().strip()
-        np = st.text_input("PIN (6 digits)", type="password", max_chars=6, key="reg_pin")
-        
-        if st.button("CREATE ACCOUNT"):
+        nu = st.text_input("Name", placeholder="1stname middlename lastname").upper().strip()
+        np = st.text_input("PIN (6 digits)", type="password", max_chars=6)
+        if st.button("CREATE"):
             if nu and len(np) == 6:
-                all_users = load_reg()
-                if nu in all_users:
-                    st.error("Name already registered!")
-                else:
-                    save(nu, {
-                        "pin": np, 
-                        "wallet": 0.0, 
-                        "ref_by": inv_n, 
-                        "inv": [], 
-                        "history": [], 
-                        "pending_actions": [], 
-                        "has_deposited": False
-                    })
-                    st.success("Registration Successful! Please Login.")
-                    time.sleep(2)
-                    st.rerun()
-            else:
-                st.error("Please provide a name and a 6-digit PIN")
+                save(nu, {"pin":np, "wallet":0.0, "ref_by":inv_n, "inv":[], "history":[], "pending_actions":[], "has_deposited":False})
+                st.success("Created!")
+                time.sleep(1)
+                st.rerun()
 
-# THE LANDING PAGE MUST BE THE VERY LAST BLOCK
-else:
-    if st.button("🔒"): 
-        st.session_state.page = "boss_key"
-        st.rerun()
+# THIS BLOCK ONLY SHOWS ON THE MAIN LANDING PAGE
+elif st.session_state.page == "landing":
     st.title("ISMEX PHILIPPINES")
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): 
         st.session_state.page = "auth"
         st.rerun()
+    if st.button("🔒 Admin"): 
+        st.session_state.page = "boss_key"
+        st.rerun()
+
+# FINAL CATCH-ALL
+else:
+    st.session_state.page = "landing"
+    st.rerun()
+        
         
