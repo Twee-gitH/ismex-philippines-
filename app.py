@@ -185,10 +185,11 @@ elif st.session_state.user:
         """, unsafe_allow_html=True)
 
     st.markdown("### 🔗 Your Referral Link")
-    reflink = f"https://ismex-ph.streamlit.app/?ref={st.session_state.user}"
-        st.info("Copy the link above and share it with your friends!")
-
-    st.markdown("### 👥 My Referrals")
+        reflink = f"https://ismex-ph.streamlit.app/?ref={st.session_state.user}"
+    st.code(reflink, language="markdown")
+    st.info("Copy the link above and share it with your friends!")
+    
+    # Then your referral table or running capitals starts here...
 
 # Table Header
 h_col1, h_col2, h_col3 = st.columns([2, 2, 1.5])
