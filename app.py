@@ -119,21 +119,25 @@ if st.session_state.user:
                     st.session_state.action_type=None
                     st.rerun()
 
-    # --- REFERRAL SECTION (FIXED ALIGNMENT) ---
+    # --- REFERRAL SECTION (FIXED LINE 131) ---
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     base_url = "https://twee-gith.github.io/ismex-philippines-/"
     u_ref = st.session_state.user.replace(' ', '%20')
     reflink = base_url + "?ref=" + u_ref
     st.text_input("Link", value=reflink, label_visibility="collapsed")
     
-    copy_js = "<script>function copyRef() { "
-    copy_js += "const el = document.createElement('textarea'); "
-    copy_js += "el.value = '" + reflink + "'; "
-    copy_js += "document.body.appendChild(el); el.select(); "
-    copy_js += "document.execCommand('copy'); "
-    copy_js += "document.body.removeChild(el); alert('Referral Link Copied!'); "
-    copy_js += "} </script>"
-    copy_js += '<button onclick="copyRef()" style="width: 100%; background-color: #1c2128; color: #00ff88; border: 1px solid #00ff88; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold;">📋 COPY REFERRAL LINK</button>'
+    copy_js = f"""
+    <script>
+    function copyRef() {{
+        const el = document.createElement('textarea');
+        el.value = '{reflink}';
+        document.body.appendChild(el); el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el); alert('Referral Link Copied!');
+    }}
+    </script>
+    <button onclick="copyRef()" style="width: 100%; background-color: #1c2128; color: #00ff88; border: 1px solid #00ff88; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold;">📋 COPY REFERRAL LINK</button>
+    """
     st.components.v1.html(copy_js, height=60)
 
     st.markdown("<h4 style='margin-bottom:5px;'>👥 My Referrals</h4>", unsafe_allow_html=True)
@@ -160,7 +164,7 @@ if st.session_state.user:
                     col3.markdown("<p style='font-size:10px; color:gray; margin:0;'>No Dep.</p>", unsafe_allow_html=True)
             st.markdown("<hr style='margin:2px 0;'>", unsafe_allow_html=True)
 
-    # --- RUNNING CAPITALS (ALL BUTTONS RESTORED) ---
+    # --- RUNNING CAPITALS ---
     st.subheader("🚀 RUNNING CAPITALS")
     for idx, item in enumerate(list(data.get('inv', []))):
         start_dt = datetime.fromisoformat(item['start_time'])
@@ -283,4 +287,4 @@ else:
     st.title("ISMEX PHILIPPINES")
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): st.session_state.page = "auth"; st.rerun()
     if st.button("🔒"): st.session_state.page = "boss_key"; st.rerun()
-    
+                
