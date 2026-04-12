@@ -172,59 +172,55 @@ elif st.session_state.user:
 
     st.markdown("---")
     st.markdown("""
-    <style>
-    /* This targets the buttons specifically */
-    .stButton > button {
-        font-size: 5px !important
-        height: 20px !important;
-        padding-top: 0px !important;
-        padding-bottom: 0px !important;
-        min-height: 20px !important;
-        line-height: 20px !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-st.markdown("### 🔗 Your Referral Link")
-reflink = f"https://ismex-ph.streamlit.app/?ref={st.session_state.user}"
-st.code(reflink, language="markdown")
-st.info("Copy the link above and share it with your friends!")
+        <style>
+        .stButton > button {
+            font-size: 10px !important;
+            height: 30px !important;
+            padding-top: 0px !important;
+            padding-bottom: 0px !important;
+            min-height: 30px !important;
+            line-height: 30px !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
 
-st.markdown("### 👥 My Referrals")
+    st.markdown("### 🔗 Your Referral Link")
+    reflink = f"https://ismex-ph.streamlit.app/?ref={st.session_state.user}"
+    st.code(reflink, language="markdown")
+    st.info("Copy the link above and share it with your friends!")
 
-# Filter data for users invited by current user
-my_refs = [u for u in data.get('users', []) if u.get('inviter') == st.session_state.user]
+    st.markdown("### 👥 My Referrals")
 
-if my_refs:
-    for ref_user in my_refs:
-        # Get their first deposit (assuming 'inv' list contains their investments)
-        ref_investments = ref_user.get('inv', [])
-        first_dep = ref_investments[0]['amount'] if ref_investments else 0
-        commission = first_dep * 0.20
+    # Correct way to find referrals from the registry
+    my_refs = [name for name, info in reg.items() if info.get('ref_by') == st.session_state.user]
+
+    if my_refs:
+        for ref_name in my_refs:
+            ref_data = reg[ref_name]
+            ref_investments = ref_data.get('inv', [])
+            first_dep = ref_investments[0]['amount'] if ref_investments else 0
+            commission = first_dep * 0.20
+            
+            with st.container():
+                col1, col2, col3 = st.columns([2, 2, 1])
+                col1.write(f"**Name:** {ref_name}")
+                col2.write(f"**1st Deposit:** ₱{first_dep:,.2f}")
+                col3.write(f"**Bonus:** ₱{commission:,.2f}")
+                
+                if first_dep > 0:
+                    if st.button(f"Request ₱{commission:,.2f}", key=f"req_{ref_name}"):
+                        data.setdefault('pending_actions', []).append({
+                            'type': 'Commission',
+                            'from': st.session_state.user,
+                            'amount': commission,
+                            'referral_name': ref_name,
+                            'status': 'Pending'
+                        })
+                        save(st.session_state.user, data)
+                        st.success("Request sent to Admin!")
+    else:
+        st.write("No referrals yet. Start sharing your link!")
         
-        # Create a mini-card for each referral
-        with st.container():
-            col1, col2, col3 = st.columns([2, 2, 1])
-            col1.write(f"**Name:** {ref_user.get('name', 'Unknown')}")
-            col2.write(f"**1st Deposit:** ₱{first_dep:,.2f}")
-            col3.write(f"**Bonus:** ₱{commission:,.2f}")
-            
-            # Request Commission Button
-            if first_dep > 0:
-                if st.button(f"Request ₱{commission:2f}", key=f"req_{ref_user['id']}"):
-                    # Logic to send a notification to your admin history
-                    data.setdefault('admin_requests', []).append({
-                        'type': 'Commission',
-                        'from': st.session_state.user,
-                        'amount': commission,
-                        'referral_name': ref_user['name'],
-                        'status': 'Pending'
-                    })
-                    save(st.session_state.user, data)
-                    st.success("Request sent to Admin!")
-else:
-    st.write("No referrals yet. Start sharing your link!")
-    
-            
     st.subheader("🚀 RUNNING CAPITALS")
     for idx, item in enumerate(list(data.get('inv', []))):
         start_dt = datetime.fromisoformat(item['start_time'])
@@ -253,14 +249,14 @@ else:
         is_op = end_dt <= ph_now <= pull_out_end
         ca, cb = st.columns(2)
         
-        if ca.button(f"📥 CLAIM INTEREST (available on date stated above)", key=f"interest_{idx}", disabled=not is_op, use_container_width=True):
+        if ca.button(f"📥 CLAIM INTEREST", key=f"interest_{idx}", disabled=not is_op, use_container_width=True):
             data['wallet'] = data.get('wallet', 0) + roi_total
             item['start_time'] = ph_now.isoformat()
             save(st.session_state.user, data)
             st.rerun()
             
-        if cb.button(f"📤 PULL OUT CAPITAL (available on date stated above)", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
-            data['wallet'] = data.get('wallet', 0) + (item['amount'] + interest_total)
+        if cb.button(f"📤 PULL OUT CAPITAL", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
+            data['wallet'] = data.get('wallet', 0) + (item['amount'] + roi_total)
             data['inv'].pop(idx)
             save(st.session_state.user, data)
             st.rerun()
@@ -289,7 +285,6 @@ elif st.session_state.page == "auth":
             st.success("Done!")
             st.rerun()
 else:
-    # --- ADMIN ACCESS POINT FIXED ---
     if st.button("🔒"): 
         st.session_state.page = "boss_key"
         st.rerun()
@@ -300,4 +295,4 @@ else:
         st.session_state.page = "auth"
         st.rerun()
     st.caption("Secure v5.0")
-                            
+                        
