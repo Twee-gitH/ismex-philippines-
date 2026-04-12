@@ -119,7 +119,7 @@ if st.session_state.user:
                     st.session_state.action_type=None
                     st.rerun()
 
-    # --- REFERRAL SECTION (FIXED INDENTATION & QUOTES) ---
+    # --- REFERRAL SECTION (ALIGNMENT FIXED) ---
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     
     base_url = "https://twee-gith.github.io/ismex-philippines-/"
@@ -128,7 +128,6 @@ if st.session_state.user:
     
     st.text_input("Link", value=reflink, label_visibility="collapsed")
     
-    # Using simple concatenation to avoid triple-quote/bracket bugs
     copy_js = "<script>function copyRef() { "
     copy_js += "const el = document.createElement('textarea'); "
     copy_js += "el.value = '" + reflink + "'; "
@@ -277,3 +276,4 @@ else:
     st.title("ISMEX PHILIPPINES")
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): st.session_state.page = "auth"; st.rerun()
     if st.button("🔒"): st.session_state.page = "boss_key"; st.rerun()
+    
