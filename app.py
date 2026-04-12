@@ -123,7 +123,7 @@ if st.session_state.user:
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     
     # Updated to match the link you confirmed is working
-base_url = "https://twee-gith.github.io/ismex-philippines-/" 
+base_url = "https://twee-gith.github.io/ismex-philippines-/"
 reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '%20')}"
 
     
