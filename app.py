@@ -119,13 +119,17 @@ if st.session_state.user:
                     st.session_state.action_type=None
                     st.rerun()
 
-    st.markdown("---")
-    st.markdown("""<style>.stButton > button { font-size: 8px !important; height: 25px !important; min-height: 25px !important; }</style>""", unsafe_allow_html=True)
-
-    st.markdown("<h4 style='margin-bottom:0px;'>🔗 Referral Link</h4>", unsafe_allow_html=True)
-    reflink = f"https://ismex-philippines-internationalstockmarketexchange.streamlit.app/?ref={st.session_state.user.replace(' ', '+')}"
-    st.code(reflink, language="markdown")
-
+        st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
+    
+    # Just put your GitHub Pages link here once
+    base_url = "https://ismex-phil.github.io/official/" 
+    reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '+')}"
+    
+    st.text_input("Link", value=reflink, label_visibility="collapsed")
+    if st.button("📋 COPY LINK", use_container_width=True):
+        st.copy_to_clipboard(reflink)
+        st.toast("Link copied!")
+        
     st.markdown("<h4 style='margin-bottom:5px;'>👥 My Referrals</h4>", unsafe_allow_html=True)
     h1, h2, h3 = st.columns([2, 1.5, 1.5])
     h1.caption("INVESTOR"); h2.caption("DEPOSIT"); h3.caption("ACTION")
