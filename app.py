@@ -14,7 +14,6 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-    /* HIDE TOP OVERLAYS */
     header, [data-testid="stToolbar"], footer { 
         visibility: hidden !important; 
         display: none !important; 
@@ -25,7 +24,7 @@ st.markdown("""
         color: white; 
     }
     
-    /* DISCREET ADMIN BUTTON - TOP LEFT */
+    /* DISCREET ADMIN BUTTON */
     .stButton>button[kind="secondary"] {
         position: fixed; 
         top: 0; 
@@ -33,19 +32,17 @@ st.markdown("""
         background: transparent !important; 
         border: none !important;
         color: rgba(255,255,255,0.01) !important; 
-        font-size: 5px; 
         z-index: 99999; 
-        width: 20px; 
-        height: 20px;
+        width: 30px; 
+        height: 30px;
     }
     
     .balance-box {
         background: linear-gradient(135deg, #1e222d 0%, #0e1117 100%);
-        padding: 2.5rem; 
+        padding: 2rem; 
         border-radius: 20px; 
         border: 2px solid #00ff88;
-        text-align: center; 
-        margin-bottom: 25px;
+        text-align: center;
     }
     
     .cap-card {
@@ -64,10 +61,10 @@ st.markdown("""
         border-left: 5px solid #00ff88;
     }
     
-    /* PADDING ADJUSTED FOR VISIBILITY */
+    /* FORCE CONTENT TO TOP */
     .main .block-container { 
-        padding-top: 3rem !important;
-        padding-bottom: 5rem !important; 
+        padding-top: 1rem !important;
+        padding-bottom: 2rem !important; 
     }
     </style>
     """, unsafe_allow_html=True)
@@ -75,8 +72,6 @@ st.markdown("""
 # THE SECRET DOOR
 if st.button("."): 
     st.session_state.page = "boss_key"
-
-# SHIELD REMOVED AS PER REQUEST - UI NOW FLOWS NATURALLY
 
 # ==========================================
 # 2. DATABASE & STATE MANAGEMENT
@@ -296,9 +291,14 @@ elif st.session_state.page == "auth":
             st.success("Registered!")
             st.rerun()
 else:
+    # --- CENTERING CONTAINER FOR MOBILE ---
     st.title("ISMEX PHILIPPINES 📊")
-    st.markdown("### Welcome to the International Stock Market Exchange")
-    if st.button("🚀 ENTER"): 
+    st.write("Welcome to the International Stock Market Exchange")
+    # THE ACTION BUTTON IS NOW HERE
+    if st.button("🚀 CLICK HERE TO ENTER PLATFORM"): 
         st.session_state.page = "auth"
         st.rerun()
-    
+    # ADDED PADDING TO ENSURE VISIBILITY
+    st.write("")
+    st.write("")
+                  
