@@ -4,16 +4,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ISMEX OFFICIAL</title>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0e1117; color: white; font-family: sans-serif; }
+        body, html { margin: 0; padding: 0; overflow: hidden; background-color: #0e1117; height: 100%; }
+        
+        /* The mask hides the bottom 50px where the Streamlit logo lives */
         .mask-container {
             position: absolute;
-            top: -55px; /* Hides top profile icon */
+            top: 0;
             left: 0;
             width: 100%;
-            height: calc(100% + 105px); /* Hides bottom 'Manage app' button */
+            height: calc(100% - 50px); 
+            overflow: hidden;
         }
-        iframe { width: 100%; height: 100%; border: none; }
-        #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        /* The iframe is taller than the container to push the logo off-screen */
+        iframe { 
+            width: 100%; 
+            height: calc(100% + 50px); 
+            border: none; 
+        }
+
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ff88;
+            font-family: sans-serif;
+            z-index: -1;
+        }
     </style>
 </head>
 <body>
@@ -25,21 +43,17 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const ref = urlParams.get('ref');
-        
-        // Updated to your actual Streamlit deployment URL
-        let targetURL = "https://investment-a6i6xonbqcuytzdgvkx9m6.streamlit.app/?embed=true&embed_options=dark_theme";
-        
-        // This ensures the ?ref= stays attached when loading the iframe
-        if (ref) { 
-            targetURL += "&ref=" + encodeURIComponent(ref); 
+
+        // Your actual Streamlit URL
+        let targetURL = "https://ismex-philippines-internationalstockmarketexchange.streamlit.app/?embed=true";
+
+        // This ensures that if someone uses your referral link, it passes to the app
+        if (ref) {
+            targetURL += "&ref=" + encodeURIComponent(ref);
         }
-        
+
         const frame = document.getElementById('main-app');
         frame.src = targetURL;
-        
-        frame.onload = function() {
-            document.getElementById('loading').style.display = 'none';
-        };
     </script>
 </body>
 </html>
