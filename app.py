@@ -132,6 +132,10 @@ elif st.session_state.user:
     if c2.button("📤 WITHDRAW BALANCE"): st.session_state.action_type = "WITHDRAW BALANCE"
     if c3.button("🔄 REINVEST"): st.session_state.action_type = "REINVEST"
 
+    if st.button("LOGOUT"): 
+        st.session_state.user = None
+        st.rerun()
+        
     if st.session_state.action_type == "DEPOSIT CAPITAL":
         with st.form("d"):
             amt_d = st.number_input("Amount", 1000.0)
@@ -214,9 +218,7 @@ elif st.session_state.user:
     for h in reversed(data.get('history', [])):
         st.markdown(f"<div class='hist-card'>{h['type']} | ₱{h['amount']:,.2f} | {h['status']}</div>", unsafe_allow_html=True)
 
-    if st.button("LOGOUT"): 
-        st.session_state.user = None
-        st.rerun()
+ 
 
 elif st.session_state.page == "auth":
     t1, t2 = st.tabs(["LOGIN", "REGISTER"])
