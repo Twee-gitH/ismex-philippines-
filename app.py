@@ -184,7 +184,6 @@ elif st.session_state.user:
     }
     </style>
     """, unsafe_allow_html=True)
-
 st.markdown("### 🔗 Your Referral Link")
 reflink = f"https://ismex-ph.streamlit.app/?ref={st.session_state.user}"
 st.code(reflink, language="markdown")
