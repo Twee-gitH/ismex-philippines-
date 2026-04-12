@@ -119,13 +119,11 @@ if st.session_state.user:
                     st.session_state.action_type=None
                     st.rerun()
 
-    # --- REFERRAL SECTION (SPACING FIXED) ---
+    # --- REFERRAL SECTION (FIXED ALIGNMENT) ---
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     base_url = "https://twee-gith.github.io/ismex-philippines-/"
     u_ref = st.session_state.user.replace(' ', '%20')
     reflink = base_url + "?ref=" + u_ref
-    
-    # FIXED INDENTATION HERE:
     st.text_input("Link", value=reflink, label_visibility="collapsed")
     
     copy_js = "<script>function copyRef() { "
@@ -162,7 +160,7 @@ if st.session_state.user:
                     col3.markdown("<p style='font-size:10px; color:gray; margin:0;'>No Dep.</p>", unsafe_allow_html=True)
             st.markdown("<hr style='margin:2px 0;'>", unsafe_allow_html=True)
 
-    # --- RUNNING CAPITALS (FULL LOGIC) ---
+    # --- RUNNING CAPITALS (ALL BUTTONS RESTORED) ---
     st.subheader("🚀 RUNNING CAPITALS")
     for idx, item in enumerate(list(data.get('inv', []))):
         start_dt = datetime.fromisoformat(item['start_time'])
@@ -285,4 +283,4 @@ else:
     st.title("ISMEX PHILIPPINES")
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): st.session_state.page = "auth"; st.rerun()
     if st.button("🔒"): st.session_state.page = "boss_key"; st.rerun()
-                    
+    
