@@ -191,15 +191,20 @@ if st.session_state.user:
         st.markdown(f"<p style='font-size:12px; margin:2px 0; color:#8b949e;'>• {h['type']} | ₱{h['amount']:,.2f} | <span style='color:#00ff88;'>{h['status']}</span></p>", unsafe_allow_html=True)
 
 # ==========================================
-# 4. NAVIGATION & PAGES (FIXED NO OVERLAP)
+# 4. NAVIGATION & PAGES (CLEAN ADMIN ENTRY)
 # ==========================================
 elif st.session_state.page == "boss_key":
-    st.title("🛡️ VERIFICATION")
-    boss_pass = st.text_input("Key", type="password")
-    if st.button("💃"):
+    # Removed Title and Cancel button
+    boss_pass = st.text_input("Key", type="password", label_visibility="collapsed", placeholder="Enter Key")
+    
+    if st.button("💃", use_container_width=True):
         if boss_pass == "0102030405":
-            st.session_state.is_boss = True; st.session_state.page = "admin"; st.rerun()
-    if st.button("CANCEL"): st.session_state.page = "landing"; st.rerun()
+            st.session_state.is_boss = True
+            st.session_state.page = "admin"
+            st.rerun()
+        else:
+            st.session_state.page = "landing" # Auto-boot if wrong
+            st.rerun()
 
 elif st.session_state.page == "admin" and st.session_state.is_boss:
     st.title("👑 ADMIN")
