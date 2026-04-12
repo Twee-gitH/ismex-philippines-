@@ -189,7 +189,7 @@ reflink = f"https://ismex-ph.streamlit.app/?ref={st.session_state.user}"
 st.code(reflink, language="markdown")
 st.info("Copy the link above and share it with your friends!")
 
-     st.markdown("### 👥 My Referrals")
+st.markdown("### 👥 My Referrals")
 
 # Filter data for users invited by current user
 my_refs = [u for u in data.get('users', []) if u.get('inviter') == st.session_state.user]
