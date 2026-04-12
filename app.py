@@ -121,7 +121,7 @@ if st.session_state.user:
 
                 st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     
-    base_url = "https://ismex-phil.github.io/official/" 
+    base_url = "https://ismex-phil.github.io/ismex-philippines/" 
     # This version keeps the link clean for the display box
     reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '%20')}"
     
