@@ -275,32 +275,50 @@ elif st.session_state.user:
         st.markdown(f"<p style='font-size:12px; margin:2px 0; color:#8b949e;'>• {h['type']} | ₱{h['amount']:,.2f} | <span style='color:#00ff88;'>{h['status']}</span></p>", unsafe_allow_html=True)
 
 # ==========================================
-# 5. NAVIGATION LOGIC (FIXED ORDER)
+# 5. NAVIGATION LOGIC (FIXED)
 # ==========================================
 elif st.session_state.page == "auth":
     t1, t2 = st.tabs(["LOGIN", "REGISTER"])
+    
     with t1:
         u = st.text_input("NAME").upper().strip()
         p = st.text_input("PIN", type="password")
         if st.button("GO"):
             r = load_reg()
-            if u in r and str(r[u]['pin']) == p: 
+            if u in r and str(r[u].get('pin')) == p: 
                 st.session_state.user = u
                 st.rerun()
+            else:
+                st.error("Invalid Credentials")
+
     with t2:
         inv_n = st.session_state.get('captured_ref', 'OFFICIAL')
         st.write(f"Invitor: {inv_n}")
-        nu = st.text_input("1stname middlename lastname").upper().strip()
-        np = st.text_input("PIN (6 digits)", type="password", max_chars=6)
-        if st.button("CREATE"):
-            if nu and np: # Added a small check to ensure fields aren't empty
-                save(nu, {"pin":np, "wallet":0.0, "ref_by":inv_n, "inv":[], "history":[], "pending_actions":[], "has_deposited":False})
-                st.success("Done!")
-                st.rerun()
+        nu = st.text_input("Full Name", placeholder="1stname middlename lastname").upper().strip()
+        np = st.text_input("PIN (6 digits)", type="password", max_chars=6, key="reg_pin")
+        
+        if st.button("CREATE ACCOUNT"):
+            if nu and len(np) == 6:
+                all_users = load_reg()
+                if nu in all_users:
+                    st.error("Name already registered!")
+                else:
+                    save(nu, {
+                        "pin": np, 
+                        "wallet": 0.0, 
+                        "ref_by": inv_n, 
+                        "inv": [], 
+                        "history": [], 
+                        "pending_actions": [], 
+                        "has_deposited": False
+                    })
+                    st.success("Registration Successful! Please Login.")
+                    time.sleep(2)
+                    st.rerun()
             else:
-                st.error("Please fill in all fields")
+                st.error("Please provide a name and a 6-digit PIN")
 
-# THE 'ELSE' MUST BE LAST
+# THE LANDING PAGE MUST BE THE VERY LAST BLOCK
 else:
     if st.button("🔒"): 
         st.session_state.page = "boss_key"
@@ -310,4 +328,3 @@ else:
         st.session_state.page = "auth"
         st.rerun()
         
-    
