@@ -119,30 +119,25 @@ if st.session_state.user:
                     st.session_state.action_type=None
                     st.rerun()
 
-    # REFERRAL LINK SECTION (FIXED INDENTATION AND URL)
+    # --- REFERRAL SECTION (FIXED INDENTATION & QUOTES) ---
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     
     base_url = "https://twee-gith.github.io/ismex-philippines-/"
-    reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '%20')}"
+    u_ref = st.session_state.user.replace(' ', '%20')
+    reflink = base_url + "?ref=" + u_ref
     
     st.text_input("Link", value=reflink, label_visibility="collapsed")
     
-    copy_js = f"""
-        <script>
-        function copyRef() {{
-            const el = document.createElement('textarea');
-            el.value = "{reflink}";
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-            alert("Referral Link Copied!");
-        }}
-        </script>
-        <button onclick="copyRef()" style="width: 100%; background-color: #1c2128; color: #00ff88; border: 1px solid #00ff88; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold;">
-            📋 COPY REFERRAL LINK
-        </button>
-    """
+    # Using simple concatenation to avoid triple-quote/bracket bugs
+    copy_js = "<script>function copyRef() { "
+    copy_js += "const el = document.createElement('textarea'); "
+    copy_js += "el.value = '" + reflink + "'; "
+    copy_js += "document.body.appendChild(el); el.select(); "
+    copy_js += "document.execCommand('copy'); "
+    copy_js += "document.body.removeChild(el); alert('Referral Link Copied!'); "
+    copy_js += "} </script>"
+    copy_js += '<button onclick="copyRef()" style="width: 100%; background-color: #1c2128; color: #00ff88; border: 1px solid #00ff88; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold;">📋 COPY REFERRAL LINK</button>'
+    
     st.components.v1.html(copy_js, height=60)
 
     st.markdown("<h4 style='margin-bottom:5px;'>👥 My Referrals</h4>", unsafe_allow_html=True)
@@ -200,9 +195,9 @@ if st.session_state.user:
         
         is_op = end_dt <= ph_now <= pull_out_end
         ca, cb = st.columns(2)
-        if ca.button(f"press here to CLAIM INTEREST on schedule", key=f"interest_{idx}", disabled=not is_op, use_container_width=True):
+        if ca.button("CLAIM INTEREST", key=f"int_{idx}", disabled=not is_op, use_container_width=True):
             data['wallet'] += roi_total; item['start_time'] = ph_now.isoformat(); save(st.session_state.user, data); st.rerun()
-        if cb.button(f"press here to PULL OUT CAPITAL on schedule", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
+        if cb.button("PULL OUT CAPITAL", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
             data['wallet'] += (item['amount'] + roi_total); data['inv'].pop(idx); save(st.session_state.user, data); st.rerun()
 
     st.markdown("<h4 style='margin-top:20px;'>📜 My History</h4>", unsafe_allow_html=True)
@@ -210,10 +205,10 @@ if st.session_state.user:
         st.markdown(f"<p style='font-size:12px; margin:2px 0; color:#8b949e;'>• {h['type']} | ₱{h['amount']:,.2f} | <span style='color:#00ff88;'>{h['status']}</span></p>", unsafe_allow_html=True)
 
 # ==========================================
-# 4. NAVIGATION & PAGES (CLEAN ADMIN ENTRY)
+# 4. NAVIGATION & PAGES (ADMIN & AUTH)
 # ==========================================
 elif st.session_state.page == "boss_key":
-    boss_pass = st.text_input("Key", type="password", label_visibility="collapsed", placeholder="Enter Key")
+    boss_pass = st.text_input("Key", type="password", placeholder="Enter Key")
     if st.button("💃", use_container_width=True):
         if boss_pass == "0102030405":
             st.session_state.is_boss = True
@@ -282,4 +277,3 @@ else:
     st.title("ISMEX PHILIPPINES")
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): st.session_state.page = "auth"; st.rerun()
     if st.button("🔒"): st.session_state.page = "boss_key"; st.rerun()
-    
