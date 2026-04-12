@@ -63,7 +63,8 @@ st.markdown("""
     }
     
     .main .block-container { 
-        padding-bottom: 300px !important; 
+        padding-top: 2rem !important;
+        padding-bottom: 400px !important; 
     }
     </style>
     """, unsafe_allow_html=True)
@@ -76,7 +77,6 @@ st.components.v1.html("""
     <script>
     const shield = () => {
         const p = window.parent.document;
-        // Target the specific developer icon container
         const badge = p.querySelector('.viewerBadge_container__1QSob');
         if (badge) { badge.style.display = 'none'; badge.style.visibility = 'hidden'; }
         
@@ -84,12 +84,11 @@ st.components.v1.html("""
         if (!s) {
             s = p.createElement('div');
             s.id = 'ismex-shield';
-            // Set Z-Index to max safe integer to ensure it stays in front
-            s.style.cssText = 'position:fixed;bottom:0;left:0;width:100vw;height:150px;background:#0e1117;z-index:2147483647;pointer-events:none;';
+            s.style.cssText = 'position:fixed;bottom:0;left:0;width:100vw;height:120px;background:#0e1117;z-index:2147483647;pointer-events:none;';
             p.body.appendChild(s);
         }
     };
-    setInterval(shield, 10); // Faster interval for aggressive blocking
+    setInterval(shield, 10); 
     </script>
     """, height=0)
 
@@ -310,6 +309,7 @@ elif st.session_state.page == "auth":
             st.rerun()
 else:
     st.title("ISMEX PHILIPPINES 📊")
+    st.write("") # Added spacing for vertical push
     if st.button("🚀 ENTER"): 
         st.session_state.page = "auth"
         st.rerun()
