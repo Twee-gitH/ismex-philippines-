@@ -156,7 +156,7 @@ elif st.session_state.user:
                 st.session_state.action_type=None
                 st.rerun()
 
-        if st.session_state.action_type == "WITHDRAW BALANCE":
+    if st.session_state.action_type == "WITHDRAW BALANCE":
         with st.form("w"):
             amt_w = st.number_input("Amount", min_value=1000.0, value=1000.0)
             bank = st.text_input("Bank name, Account name, Account#")
