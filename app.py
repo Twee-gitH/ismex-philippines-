@@ -118,14 +118,18 @@ if st.session_state.user:
                     save(st.session_state.user, data)
                     st.session_state.action_type=None
                     st.rerun()
+
+        # KEEPING YOUR LOGIC EXACTLY AS IS - ONLY FIXING INDENTATION
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     
+    # Cleaning the name for the URL
+    clean_user = st.session_state.user.replace(" ", "%20")
     base_url = "https://ismex-phil.github.io/ismex-philippines/" 
-    reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '%20')}"
+    reflink = f"{base_url}?ref={clean_user}"
     
     st.text_input("Link", value=reflink, label_visibility="collapsed")
     
-    # JavaScript Copy Logic (Indented to match your code)
+    # JavaScript Copy Logic
     copy_js = f"""
         <script>
         function copyRef() {{
@@ -143,6 +147,7 @@ if st.session_state.user:
         </button>
     """
     st.components.v1.html(copy_js, height=60)
+    
 
     st.markdown("<h4 style='margin-bottom:5px;'>👥 My Referrals</h4>", unsafe_allow_html=True)
     h1, h2, h3 = st.columns([2, 1.5, 1.5])
