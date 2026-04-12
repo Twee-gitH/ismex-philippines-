@@ -184,12 +184,12 @@ elif st.session_state.user:
     st.markdown("""
         <style>
         .stButton > button {
-            font-size: 10px !important;
-            height: 30px !important;
+            font-size: 8px !important;
+            height: 25px !important;
             padding-top: 0px !important;
             padding-bottom: 0px !important;
-            min-height: 30px !important;
-            line-height: 30px !important;
+            min-height: 25px !important;
+            line-height: 25px !important;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -255,13 +255,13 @@ elif st.session_state.user:
         is_op = end_dt <= ph_now <= pull_out_end
         ca, cb = st.columns(2)
         
-        if ca.button(f"📥 CLAIM INTEREST", key=f"interest_{idx}", disabled=not is_op, use_container_width=True):
+        if ca.button(f"press here to CLAIM INTEREST on schedule", key=f"interest_{idx}", disabled=not is_op, use_container_width=True):
             data['wallet'] = data.get('wallet', 0) + roi_total
             item['start_time'] = ph_now.isoformat()
             save(st.session_state.user, data)
             st.rerun()
             
-        if cb.button(f"📤 PULL OUT CAPITAL", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
+        if cb.button(f"press here to PULL OUT CAPITAL on schedule", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
             data['wallet'] = data.get('wallet', 0) + (item['amount'] + roi_total)
             data['inv'].pop(idx)
             save(st.session_state.user, data)
