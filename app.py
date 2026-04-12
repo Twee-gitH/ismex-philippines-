@@ -142,7 +142,7 @@ elif st.session_state.user:
             st.file_uploader("Receipt", type=['jpg','png','jpeg'])
             if st.form_submit_button("SUBMIT"):
                 data.setdefault('pending_actions', []).append({"type":"DEPOSIT", "amount":amt_d, "request_id":req_id})
-                data.setdefault('history', []).append({"type":"DEPOSIT", "amount":amt_d, "status":"PENDING", "request_id":req_id, "date":ph_now.strftime("%Y-%m-%d")})
+                data.setdefault('history', []).append({"type":"DEPOSIT", "amount":amt_d, "status":"Waiting Approval", "request_id":req_id, "date":ph_now.strftime("%Y-%m-%d")})
                 save(st.session_state.user, data)
                 st.session_state.action_type=None
                 st.rerun()
@@ -173,45 +173,49 @@ elif st.session_state.user:
                     st.rerun()
 
     st.markdown("---")
-    st.subheader("🚀 CAPITALS")
-    active_inv = data.get('inv', [])
-    for idx, item in enumerate(list(active_inv)):
+        st.subheader("🚀 RUNNING CAPITALS")
+    for idx, item in enumerate(list(data.get('inv', []))):
         start_dt = datetime.fromisoformat(item['start_time'])
         end_dt = start_dt + timedelta(days=7)
-        expiry_dt = end_dt + timedelta(hours=1)
-        elapsed = (ph_now - start_dt).total_seconds()
-        total_sec = 7 * 86400
-        progress = min(1.0, elapsed / total_sec)
-        roi_total = item['amount'] * 0.20
-        live_roi = (elapsed / total_sec) * roi_total if elapsed < total_sec else roi_total
+        pull_out_end = end_dt + timedelta(hours=1)
         
-        if ph_now > expiry_dt:
-            item['amount'] += roi_total
-            item['start_time'] = ph_now.isoformat()
-            save(st.session_state.user, data)
-            st.rerun()
-            
+        elapsed = (ph_now - start_dt).total_seconds()
+        progress = min(1.0, elapsed / 604800)
+        roi_total = item['amount'] * 0.20
+        live_profit = progress * roi_total
+
         with st.container():
-            st.markdown("<div class='cap-card'>", unsafe_allow_html=True)
-            ca, cb = st.columns([2, 1])
-            with ca:
-                st.write(f"₱{item['amount']:,.2f} | ROI: ₱{live_roi:,.2f}")
-                st.progress(progress)
-            with cb:
-                is_op = end_dt <= ph_now <= expiry_dt
-                if ph_now < end_dt:
-                    diff = end_dt - ph_now
-                    st.caption(f"{diff.days}d {diff.seconds//3600}h left")
-                if st.button(f"CLAIM", key=f"r_{idx}", disabled=not is_op):
-                    data['wallet'] += roi_total
-                    item['start_time'] = ph_now.isoformat()
-                    save(st.session_state.user, data)
-                    st.rerun()
-                if st.button(f"EXIT", key=f"c_{idx}", disabled=not is_op):
-                    data['wallet'] += item['amount']
-                    data['inv'].pop(idx)
-                    save(st.session_state.user, data)
-                    st.rerun()
+            # This creates the dark card style from your photo
+            st.markdown(f"""
+            <div style="background-color: #1c2128; padding: 15px; border-radius: 10px; border-left: 5px solid #00ff88; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #8b949e; font-weight: bold;">CAPITAL: ₱{item['amount']:,.2f}</span>
+                    <span style="color: #00ff88; font-weight: bold;">ROI: ₱{roi_total:,.2f}</span>
+                </div>
+                <div style="margin-top: 5px; font-size: 0.9em;">LIVE PROFIT: ₱{live_profit:,.2f}</div>
+                <div style="color: #e3b341; font-size: 0.8em; margin-top: 10px;">
+                    ⚠️ Capital and interest available to pull out on:<br>
+                    {end_dt.strftime('%Y-%m-%d %I:%M %p')} until {pull_out_end.strftime('%I:%M %p')}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Action buttons
+            is_op = end_dt <= ph_now <= pull_out_end
+            col_a, col_b = st.columns(2)
+            
+            if col_a.button(f"📥 CLAIM ROI", key=f"roi_{idx}", disabled=not is_op, use_container_width=True):
+                data['wallet'] += roi_total
+                item['start_time'] = ph_now.isoformat()
+                save(st.session_state.user, data)
+                st.rerun()
+                
+            if col_b.button(f"📤 PULL OUT", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
+                data['wallet'] += (item['amount'] + roi_total)
+                data['inv'].pop(idx)
+                save(st.session_state.user, data)
+                st.rerun()
+
             st.markdown("</div>", unsafe_allow_html=True)
 
     st.subheader("📜 HISTORY")
