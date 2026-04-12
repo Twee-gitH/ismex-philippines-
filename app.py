@@ -199,14 +199,14 @@ elif st.session_state.user:
         is_op = end_dt <= ph_now <= pull_out_end
         ca, cb = st.columns(2)
         
-        if ca.button(f"📥 CLAIM ROI", key=f"roi_{idx}", disabled=not is_op, use_container_width=True):
+        if ca.button(f"📥 CLAIM INTEREST (available on date stated above)", key=f"interest_{idx}", disabled=not is_op, use_container_width=True):
             data['wallet'] = data.get('wallet', 0) + roi_total
             item['start_time'] = ph_now.isoformat()
             save(st.session_state.user, data)
             st.rerun()
             
-        if cb.button(f"📤 PULL OUT", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
-            data['wallet'] = data.get('wallet', 0) + (item['amount'] + roi_total)
+        if cb.button(f"📤 PULL OUT CAPITAL (available on date stated above)", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
+            data['wallet'] = data.get('wallet', 0) + (item['amount'] + interest_total)
             data['inv'].pop(idx)
             save(st.session_state.user, data)
             st.rerun()
