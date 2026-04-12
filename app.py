@@ -171,6 +171,19 @@ elif st.session_state.user:
                     st.rerun()
 
     st.markdown("---")
+    st.markdown("""
+    <style>
+    /* This targets the buttons specifically */
+    .stButton > button {
+        height: 35px !important;
+        padding-top: 0px !important;
+        padding-bottom: 0px !important;
+        min-height: 35px !important;
+        line-height: 35px !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+            
     st.subheader("🚀 RUNNING CAPITALS")
     for idx, item in enumerate(list(data.get('inv', []))):
         start_dt = datetime.fromisoformat(item['start_time'])
