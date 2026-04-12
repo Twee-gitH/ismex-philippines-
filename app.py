@@ -120,30 +120,31 @@ if st.session_state.user:
                     st.rerun()
 
                         st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
-    
-    # EXACT LINK TO YOUR REPOSITORY
-    base_url = "https://ismex-phil.github.io/ismex-philippines/" 
-    reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '%20')}"
-    
-    st.text_input("Link", value=reflink, label_visibility="collapsed")
-    
-    copy_js = f"""
-        <script>
-        function copyRef() {{
-            const el = document.createElement('textarea');
-            el.value = "{reflink}";
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-            alert("Referral Link Copied!");
-        }}
-        </script>
-        <button onclick="copyRef()" style="width: 100%; background-color: #1c2128; color: #00ff88; border: 1px solid #00ff88; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold;">
-            📋 COPY REFERRAL LINK
-        </button>
-    """
-    st.components.v1.html(copy_js, height=60)
+
+base_url = "https://ismex-phil.github.io/ismex-philippines/" 
+reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '%20')}"
+
+st.text_input("Link", value=reflink, label_visibility="collapsed")
+
+# JavaScript Copy Logic
+copy_js = f"""
+    <script>
+    function copyRef() {{
+        const el = document.createElement('textarea');
+        el.value = "{reflink}";
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        alert("Referral Link Copied!");
+    }}
+    </script>
+    <button onclick="copyRef()" style="width: 100%; background-color: #1c2128; color: #00ff88; border: 1px solid #00ff88; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+        📋 COPY REFERRAL LINK
+    </button>
+"""
+st.components.v1.html(copy_js, height=60)
+
 
                 
 
