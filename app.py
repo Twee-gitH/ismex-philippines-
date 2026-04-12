@@ -186,40 +186,53 @@ elif st.session_state.user:
 
     st.markdown("### 🔗 Your Referral Link")
     reflink = f"https://ismex-ph.streamlit.app/?ref={st.session_state.user}"
-    st.code(reflink, language="markdown")
-    st.info("Copy the link above and share it with your friends!")
-
+    
     st.markdown("### 👥 My Referrals")
 
-    # Correct way to find referrals from the registry
-    my_refs = [name for name, info in reg.items() if info.get('ref_by') == st.session_state.user]
+# Table Header
+h_col1, h_col2, h_col3 = st.columns([2, 2, 1.5])
+h_col1.caption("INVESTOR")
+h_col2.caption("1ST DEPOSIT")
+h_col3.caption("ACTION")
 
-    if my_refs:
-        for ref_name in my_refs:
-            ref_data = reg[ref_name]
-            ref_investments = ref_data.get('inv', [])
-            first_dep = ref_investments[0]['amount'] if ref_investments else 0
-            commission = first_dep * 0.20
+# Filter data for users invited by current user
+my_refs = [name for name, info in reg.items() if info.get('ref_by') == st.session_state.user]
+
+if my_refs:
+    for ref_name in my_refs:
+        ref_data = reg[ref_name]
+        ref_investments = ref_data.get('inv', [])
+        first_dep = ref_investments[0]['amount'] if ref_investments else 0
+        commission = first_dep * 0.20
+        
+        # Row Container
+        with st.container():
+            col1, col2, col3 = st.columns([2, 2, 1.5])
             
-            with st.container():
-                col1, col2, col3 = st.columns([2, 2, 1])
-                col1.write(f"**Name:** {ref_name}")
-                col2.write(f"**1st Deposit:** ₱{first_dep:,.2f}")
-                col3.write(f"**Bonus:** ₱{commission:,.2f}")
-                
-                if first_dep > 0:
-                    if st.button(f"Request ₱{commission:,.2f}", key=f"req_{ref_name}"):
-                        data.setdefault('pending_actions', []).append({
-                            'type': 'Commission',
-                            'from': st.session_state.user,
-                            'amount': commission,
-                            'referral_name': ref_name,
-                            'status': 'Pending'
-                        })
-                        save(st.session_state.user, data)
-                        st.success("Request sent to Admin!")
-    else:
-        st.write("No referrals yet. Start sharing your link!")
+            # Column 1: Name
+            col1.markdown(f"**{ref_name}**")
+            
+            # Column 2: Amount
+            col2.markdown(f"₱{first_dep:,.2f}")
+            
+            # Column 3: Request Button
+            if first_dep > 0:
+                if col3.button(f"CLAIM ₱{commission:,.0f}", key=f"req_{ref_name}", use_container_width=True):
+                    data.setdefault('pending_actions', []).append({
+                        'type': 'Commission',
+                        'from': st.session_state.user,
+                        'amount': commission,
+                        'referral_name': ref_name,
+                        'status': 'Pending'
+                    })
+                    save(st.session_state.user, data)
+                    st.success(f"Request for {ref_name} sent!")
+            else:
+                col3.info("No Dep.")
+        st.markdown("---") # Thin line between rows
+else:
+    st.write("No referrals yet. Start sharing your link!")
+    
         
     st.subheader("🚀 RUNNING CAPITALS")
     for idx, item in enumerate(list(data.get('inv', []))):
