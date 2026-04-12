@@ -175,11 +175,12 @@ elif st.session_state.user:
     <style>
     /* This targets the buttons specifically */
     .stButton > button {
-        height: 35px !important;
+        font-size: 10px !important
+        height: 30px !important;
         padding-top: 0px !important;
         padding-bottom: 0px !important;
-        min-height: 35px !important;
-        line-height: 35px !important;
+        min-height: 30px !important;
+        line-height: 30px !important;
     }
     </style>
     """, unsafe_allow_html=True)
