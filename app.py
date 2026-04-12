@@ -119,9 +119,9 @@ if st.session_state.user:
                     st.session_state.action_type=None
                     st.rerun()
 
-                    st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
+                        st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     
-    # Keeping your original repository name here
+    # EXACT LINK TO YOUR REPOSITORY
     base_url = "https://ismex-phil.github.io/ismex-philippines/" 
     reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '%20')}"
     
@@ -144,6 +144,7 @@ if st.session_state.user:
         </button>
     """
     st.components.v1.html(copy_js, height=60)
+
                 
 
 
