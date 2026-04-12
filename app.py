@@ -12,20 +12,12 @@ st.set_page_config(
     layout="wide"
 )
 
-# CLEAN CSS - NO SHIELDS, NO HIDDEN OVERLAYS
+# MINIMALIST CSS - NO POSITIONING HACKS
 st.markdown("""
     <style>
     .stApp { 
         background-color: #0e1117 !important; 
         color: white; 
-    }
-    
-    /* DISCREET ADMIN BUTTON */
-    .stButton>button[kind="secondary"] {
-        background: transparent !important; 
-        border: none !important;
-        color: rgba(255,255,255,0.1) !important; 
-        font-size: 10px; 
     }
     
     .balance-box {
@@ -53,15 +45,15 @@ st.markdown("""
         border-left: 5px solid #00ff88;
     }
     
-    /* STANDARD MOBILE PADDING */
+    /* REMOVE ALL FORCED PADDING */
     .main .block-container { 
-        padding: 1rem !important;
+        padding: 1.5rem !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# THE SECRET DOOR
-if st.button(". ", kind="secondary"): 
+# THE SECRET DOOR (REMOVED 'KIND' TO FIX TYPEERROR)
+if st.button("."): 
     st.session_state.page = "boss_key"
 
 # ==========================================
@@ -231,7 +223,7 @@ elif st.session_state.user:
                 is_op = end_dt <= ph_now <= expiry_dt
                 if ph_now < end_dt:
                     diff = end_dt - ph_now
-                    st.caption(f"{diff.days}d {diff.seconds//3600}h left")
+                    st.caption(f"{diff.days}d left")
                 if st.button(f"CLAIM", key=f"r_{idx}", disabled=not is_op):
                     data['wallet'] += roi_total
                     item['start_time'] = ph_now.isoformat()
@@ -244,9 +236,6 @@ elif st.session_state.user:
                     st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.code(f"Ref: {st.session_state.user}")
-    
     if st.button("LOGOUT"): 
         st.session_state.user = None
         st.rerun()
@@ -265,23 +254,20 @@ elif st.session_state.page == "auth":
         inv_n = st.session_state.get('captured_ref', 'OFFICIAL')
         st.write(f"Invitor: {inv_n}")
         nu = st.text_input("FULL NAME").upper().strip()
-        np = st.text_input("PIN (4 digits)", type="password", max_chars=4)
+        np = st.text_input("PIN", type="password", max_chars=4)
         if st.button("CREATE"):
             save(nu, {"pin":np, "wallet":0.0, "ref_by":inv_n, "inv":[], "history":[], "pending_actions":[], "has_deposited":False})
             st.success("Done!")
             st.rerun()
 else:
-    # --- SIMPLE LANDING ---
+    # --- SIMPLE LANDING PAGE ---
     st.title("ISMEX PHILIPPINES 📊")
-    st.subheader("International Stock Market Exchange")
-    st.write("Secure Trading Platform")
+    st.write("Welcome to the Trading Platform")
     
-    # LARGE CLEAR BUTTON
+    # This button will now appear clearly in the flow
     if st.button("🚀 ENTER PLATFORM NOW", use_container_width=True): 
         st.session_state.page = "auth"
         st.rerun()
     
-    st.write("")
-    st.write("")
-    st.caption("v4.0 Mobile Optimized")
-    
+    st.caption("Secure Exchange v5.0")
+                                 
