@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import time
 
 # ==========================================
-# 1. UI CONFIGURATION
+# 1. UI CONFIGURATION (FULL CUSTOM CSS)
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
@@ -33,7 +33,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. DATABASE & STATE
+# 2. DATABASE & STATE MANAGEMENT
 # ==========================================
 @st.cache_resource
 def get_db():
@@ -61,7 +61,7 @@ if "ref" in st.query_params:
     st.session_state["captured_ref"] = st.query_params["ref"].replace("+", " ").upper().strip()
 
 # ==========================================
-# 3. USER DASHBOARD & TRANSACTION LOGIC
+# 3. USER DASHBOARD & FULL TRANSACTION LOGIC
 # ==========================================
 if st.session_state.user:
     reg = load_reg()
@@ -70,6 +70,7 @@ if st.session_state.user:
     ph_now = datetime.now() + timedelta(hours=8)
     req_id = ph_now.strftime("%f")
 
+    # --- TOP BALANCE UI ---
     st.markdown(f"<div class='balance-box'><h3>AVAILABLE BALANCE</h3><h1>₱{max(0.0, wallet):,.2f}</h1></div>", unsafe_allow_html=True)
     
     c1, c2, c3 = st.columns(3)
@@ -81,6 +82,7 @@ if st.session_state.user:
         st.session_state.user = None
         st.rerun()
         
+    # --- TRANSACTION FORMS ---
     if st.session_state.action_type == "DEPOSIT CAPITAL":
         with st.form("d"):
             amt_d = st.number_input("Amount", 1000.0)
@@ -119,13 +121,11 @@ if st.session_state.user:
                     st.session_state.action_type=None
                     st.rerun()
 
-    # --- REFERRAL SECTION (ALIGNMENT FIXED) ---
+    # --- REFERRAL SECTION (FIXED EDITOR BUG) ---
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
-    
     base_url = "https://twee-gith.github.io/ismex-philippines-/"
     u_ref = st.session_state.user.replace(' ', '%20')
     reflink = base_url + "?ref=" + u_ref
-    
     st.text_input("Link", value=reflink, label_visibility="collapsed")
     
     copy_js = "<script>function copyRef() { "
@@ -136,9 +136,9 @@ if st.session_state.user:
     copy_js += "document.body.removeChild(el); alert('Referral Link Copied!'); "
     copy_js += "} </script>"
     copy_js += '<button onclick="copyRef()" style="width: 100%; background-color: #1c2128; color: #00ff88; border: 1px solid #00ff88; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold;">📋 COPY REFERRAL LINK</button>'
-    
     st.components.v1.html(copy_js, height=60)
 
+    # --- MY REFERRALS LIST ---
     st.markdown("<h4 style='margin-bottom:5px;'>👥 My Referrals</h4>", unsafe_allow_html=True)
     h1, h2, h3 = st.columns([2, 1.5, 1.5])
     h1.caption("INVESTOR"); h2.caption("DEPOSIT"); h3.caption("ACTION")
@@ -163,13 +163,17 @@ if st.session_state.user:
                     col3.markdown("<p style='font-size:10px; color:gray; margin:0;'>No Dep.</p>", unsafe_allow_html=True)
             st.markdown("<hr style='margin:2px 0;'>", unsafe_allow_html=True)
 
+    # --- RUNNING CAPITALS (FULL LOGIC + WINDOW TEXT) ---
     st.subheader("🚀 RUNNING CAPITALS")
     for idx, item in enumerate(list(data.get('inv', []))):
         start_dt = datetime.fromisoformat(item['start_time'])
         end_dt = start_dt + timedelta(days=7)
         pull_out_end = end_dt + timedelta(hours=1)
+        
         if ph_now > pull_out_end:
-            item['start_time'] = ph_now.isoformat(); save(st.session_state.user, data); st.rerun()
+            item['start_time'] = ph_now.isoformat()
+            save(st.session_state.user, data)
+            st.rerun()
 
         elapsed = (ph_now - start_dt).total_seconds()
         progress = min(1.0, elapsed / 604800)
@@ -194,17 +198,24 @@ if st.session_state.user:
         
         is_op = end_dt <= ph_now <= pull_out_end
         ca, cb = st.columns(2)
-        if ca.button("CLAIM INTEREST", key=f"int_{idx}", disabled=not is_op, use_container_width=True):
-            data['wallet'] += roi_total; item['start_time'] = ph_now.isoformat(); save(st.session_state.user, data); st.rerun()
-        if cb.button("PULL OUT CAPITAL", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
-            data['wallet'] += (item['amount'] + roi_total); data['inv'].pop(idx); save(st.session_state.user, data); st.rerun()
+        if ca.button("press here to CLAIM INTEREST on schedule", key=f"int_{idx}", disabled=not is_op, use_container_width=True):
+            data['wallet'] += roi_total
+            item['start_time'] = ph_now.isoformat()
+            save(st.session_state.user, data)
+            st.rerun()
+        if cb.button("press here to PULL OUT CAPITAL on schedule", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
+            data['wallet'] += (item['amount'] + roi_total)
+            data['inv'].pop(idx)
+            save(st.session_state.user, data)
+            st.rerun()
 
+    # --- HISTORY LEDGER ---
     st.markdown("<h4 style='margin-top:20px;'>📜 My History</h4>", unsafe_allow_html=True)
     for h in reversed(data.get('history', [])):
         st.markdown(f"<p style='font-size:12px; margin:2px 0; color:#8b949e;'>• {h['type']} | ₱{h['amount']:,.2f} | <span style='color:#00ff88;'>{h['status']}</span></p>", unsafe_allow_html=True)
 
 # ==========================================
-# 4. NAVIGATION & PAGES (ADMIN & AUTH)
+# 4. NAVIGATION & AUTH (ADMIN & LANDING)
 # ==========================================
 elif st.session_state.page == "boss_key":
     boss_pass = st.text_input("Key", type="password", placeholder="Enter Key")
@@ -276,4 +287,4 @@ else:
     st.title("ISMEX PHILIPPINES")
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): st.session_state.page = "auth"; st.rerun()
     if st.button("🔒"): st.session_state.page = "boss_key"; st.rerun()
-    
+                    
