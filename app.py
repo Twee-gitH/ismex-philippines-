@@ -173,7 +173,8 @@ elif st.session_state.user:
                     st.rerun()
 
     st.markdown("---")
-        st.subheader("🚀 RUNNING CAPITALS")
+    for     
+    st.subheader("🚀 RUNNING CAPITALS")
     for idx, item in enumerate(list(data.get('inv', []))):
         start_dt = datetime.fromisoformat(item['start_time'])
         end_dt = start_dt + timedelta(days=7)
@@ -184,37 +185,35 @@ elif st.session_state.user:
         roi_total = item['amount'] * 0.20
         live_profit = progress * roi_total
 
-        with st.container():
-            # This creates the dark card style from your photo
-            st.markdown(f"""
-            <div style="background-color: #1c2128; padding: 15px; border-radius: 10px; border-left: 5px solid #00ff88; margin-bottom: 10px;">
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #8b949e; font-weight: bold;">CAPITAL: ₱{item['amount']:,.2f}</span>
-                    <span style="color: #00ff88; font-weight: bold;">ROI: ₱{roi_total:,.2f}</span>
-                </div>
-                <div style="margin-top: 5px; font-size: 0.9em;">LIVE PROFIT: ₱{live_profit:,.2f}</div>
-                <div style="color: #e3b341; font-size: 0.8em; margin-top: 10px;">
-                    ⚠️ Capital and interest available to pull out on:<br>
-                    {end_dt.strftime('%Y-%m-%d %I:%M %p')} until {pull_out_end.strftime('%I:%M %p')}
-                </div>
+        # Exact layout from your screenshot
+        st.markdown(f"""
+        <div style="background-color: #1c2128; padding: 15px; border-radius: 10px; border-left: 5px solid #00ff88; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: #8b949e; font-weight: bold;">CAPITAL: ₱{item['amount']:,.2f}</span>
+                <span style="color: #00ff88; font-weight: bold;">ROI: ₱{roi_total:,.2f}</span>
             </div>
-            """, unsafe_allow_html=True)
+            <div style="margin-top: 5px; color: white; font-size: 0.9em;">LIVE PROFIT: ₱{live_profit:,.2f}</div>
+            <div style="color: #e3b341; font-size: 0.8em; margin-top: 10px;">
+                ⚠️ Capital and interest available to pull out on:<br>
+                {end_dt.strftime('%Y-%m-%d %I:%M %p')} until {pull_out_end.strftime('%I:%M %p')}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        is_op = end_dt <= ph_now <= pull_out_end
+        ca, cb = st.columns(2)
+        
+        if ca.button(f"📥 CLAIM ROI", key=f"roi_{idx}", disabled=not is_op, use_container_width=True):
+            data['wallet'] = data.get('wallet', 0) + roi_total
+            item['start_time'] = ph_now.isoformat()
+            save(st.session_state.user, data)
+            st.rerun()
             
-            # Action buttons
-            is_op = end_dt <= ph_now <= pull_out_end
-            col_a, col_b = st.columns(2)
-            
-            if col_a.button(f"📥 CLAIM ROI", key=f"roi_{idx}", disabled=not is_op, use_container_width=True):
-                data['wallet'] += roi_total
-                item['start_time'] = ph_now.isoformat()
-                save(st.session_state.user, data)
-                st.rerun()
-                
-            if col_b.button(f"📤 PULL OUT", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
-                data['wallet'] += (item['amount'] + roi_total)
-                data['inv'].pop(idx)
-                save(st.session_state.user, data)
-                st.rerun()
+        if cb.button(f"📤 PULL OUT", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
+            data['wallet'] = data.get('wallet', 0) + (item['amount'] + roi_total)
+            data['inv'].pop(idx)
+            save(st.session_state.user, data)
+            st.rerun()
 
             st.markdown("</div>", unsafe_allow_html=True)
 
