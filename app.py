@@ -119,26 +119,33 @@ if st.session_state.user:
                     st.session_state.action_type=None
                     st.rerun()
 
-            st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
+                st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     
     base_url = "https://ismex-phil.github.io/official/" 
-    reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '+')}"
+    # This version keeps the link clean for the display box
+    reflink = f"{base_url}?ref={st.session_state.user.replace(' ', '%20')}"
     
     st.text_input("Link", value=reflink, label_visibility="collapsed")
     
-    # JavaScript Copy Logic
+    # JavaScript Copy Logic (No more AttributeError)
     copy_js = f"""
         <script>
         function copyRef() {{
-            navigator.clipboard.writeText("{reflink}");
+            const el = document.createElement('textarea');
+            el.value = "{reflink}";
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
             alert("Referral Link Copied!");
         }}
         </script>
-        <button onclick="copyRef()" style="width: 100%; background-color: #1c2128; color: white; border: 1px solid #30363d; padding: 10px; border-radius: 8px; cursor: pointer;">
-            📋 COPY LINK
+        <button onclick="copyRef()" style="width: 100%; background-color: #1c2128; color: #00ff88; border: 1px solid #00ff88; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+            📋 COPY REFERRAL LINK
         </button>
     """
-    st.components.v1.html(copy_js, height=50)
+    st.components.v1.html(copy_js, height=60)
+
 
         
     st.markdown("<h4 style='margin-bottom:5px;'>👥 My Referrals</h4>", unsafe_allow_html=True)
