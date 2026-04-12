@@ -184,6 +184,47 @@ elif st.session_state.user:
     }
     </style>
     """, unsafe_allow_html=True)
+
+    st.markdown("### 🔗 Your Referral Link")
+reflink = f"https://ismex-ph.streamlit.app/?ref={st.session_state.user}"
+st.code(reflink, language="markdown")
+st.info("Copy the link above and share it with your friends!")
+
+     st.markdown("### 👥 My Referrals")
+
+# Filter data for users invited by current user
+my_refs = [u for u in data.get('users', []) if u.get('inviter') == st.session_state.user]
+
+if my_refs:
+    for ref_user in my_refs:
+        # Get their first deposit (assuming 'inv' list contains their investments)
+        ref_investments = ref_user.get('inv', [])
+        first_dep = ref_investments[0]['amount'] if ref_investments else 0
+        commission = first_dep * 0.20
+        
+        # Create a mini-card for each referral
+        with st.container():
+            col1, col2, col3 = st.columns([2, 2, 1])
+            col1.write(f"**Name:** {ref_user.get('name', 'Unknown')}")
+            col2.write(f"**1st Deposit:** ₱{first_dep:,.2f}")
+            col3.write(f"**Bonus:** ₱{commission:,.2f}")
+            
+            # Request Commission Button
+            if first_dep > 0:
+                if st.button(f"Request ₱{commission:2f}", key=f"req_{ref_user['id']}"):
+                    # Logic to send a notification to your admin history
+                    data.setdefault('admin_requests', []).append({
+                        'type': 'Commission',
+                        'from': st.session_state.user,
+                        'amount': commission,
+                        'referral_name': ref_user['name'],
+                        'status': 'Pending'
+                    })
+                    save(st.session_state.user, data)
+                    st.success("Request sent to Admin!")
+else:
+    st.write("No referrals yet. Start sharing your link!")
+    
             
     st.subheader("🚀 RUNNING CAPITALS")
     for idx, item in enumerate(list(data.get('inv', []))):
