@@ -195,31 +195,42 @@ elif st.session_state.user:
     st.code(reflink, language="markdown")
 
     st.markdown("### 👥 My Referrals")
-    h1, h2, h3 = st.columns([2, 2, 1.5])
+    h1, h2, h3 = st.columns([2, 1.5, 1.5])
     h1.caption("INVESTOR")
-    h2.caption("1ST DEPOSIT")
+    h2.caption("DEPOSIT")
     h3.caption("ACTION")
 
     my_refs = [name for name, info in reg.items() if info.get('ref_by') == st.session_state.user]
+    
     if my_refs:
         for ref_name in my_refs:
             ref_data = reg[ref_name]
             ref_invest = ref_data.get('inv', [])
             f_dep = ref_invest[0]['amount'] if ref_invest else 0
             comm = f_dep * 0.20
+            
+            # This container acts as a table row
             with st.container():
-                col1, col2, col3 = st.columns([2, 2, 1.5])
-                col1.write(f"**{ref_name}**")
-                col2.write(f"₱{f_dep:,.2f}")
+                col1, col2, col3 = st.columns([2, 1.5, 1.5])
+                col1.markdown(f"<p style='font-size:12px; margin:0;'>{ref_name}</p>", unsafe_allow_html=True)
+                col2.markdown(f"<p style='font-size:12px; margin:0;'>₱{f_dep:,.0f}</p>", unsafe_allow_html=True)
+                
                 if f_dep > 0:
-                    if col3.button(f"CLAIM ₱{comm:,.0f}", key=f"r_{ref_name}"):
-                        data.setdefault('pending_actions', []).append({'type': 'Commission','from': st.session_state.user,'amount': comm,'referral_name': ref_name,'status': 'Pending'})
+                    if col3.button(f"CLAIM ₱{comm:,.0f}", key=f"r_{ref_name}", use_container_width=True):
+                        data.setdefault('pending_actions', []).append({
+                            'type': 'Commission',
+                            'from': st.session_state.user,
+                            'amount': comm,
+                            'referral_name': ref_name,
+                            'status': 'Pending'
+                        })
                         save(st.session_state.user, data)
-                        st.success("Requested!")
-                else: col3.info("No Dep.")
-            st.markdown("---")
+                        st.success("Sent!")
+                else:
+                    col3.markdown("<p style='font-size:10px; color:gray; margin:0;'>No Dep.</p>", unsafe_allow_html=True)
+            st.markdown("<hr style='margin:2px 0;'>", unsafe_allow_html=True) # Very thin divider
     else:
-        st.write("No referrals yet.")
+        st.caption("No referrals yet.")
 
     st.subheader("🚀 RUNNING CAPITALS")
     for idx, item in enumerate(list(data.get('inv', []))):
