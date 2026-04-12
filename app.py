@@ -30,7 +30,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-if st.button("."): st.session_state.page = "boss_key"
+# ADMIN BUTTON REMOVED FROM GLOBAL SCOPE TO PREVENT DASHBOARD LEAK
 
 # ==========================================
 # 2. DATABASE & STATE
@@ -93,7 +93,6 @@ if st.session_state.is_boss:
                     c1, c2 = st.columns(2)
                     if c1.button("APPROVE", key=f"ap_{u}_{idx}"):
                         ph = datetime.now() + timedelta(hours=8)
-                        # REFERRAL LOGIC: 20% commission on first deposit
                         if act['type'] == "DEPOSIT" and not u_data.get('has_deposited'):
                             inv = u_data.get('ref_by', 'OFFICIAL')
                             if inv in reg:
@@ -114,7 +113,7 @@ if st.session_state.is_boss:
                         save(u, u_data)
                         st.rerun()
     with t2:
-        st.table([{"NAME": n, "PIN": i.get('pin'), "WALLET": i.get('wallet'), "INVITOR": i.get('ref_by')} for n, i in reg.items()])
+        st.table([{"NAME": n, "PIN": i.get('pin'), "WALLET": i.get('wallet'), "REF": i.get('ref_by')} for n, i in reg.items()])
 
 # ==========================================
 # 4. USER DASHBOARD & TRANSACTION LOGIC
@@ -239,10 +238,13 @@ elif st.session_state.page == "auth":
             st.success("Done!")
             st.rerun()
 else:
+    # --- ADMIN ACCESS ONLY HERE ---
+    if st.button("."): st.session_state.page = "boss_key"
+    
     st.title("ISMEX PHILIPPINES 📊")
     st.write("International Stock Market Exchange")
     if st.button("🚀 ENTER PLATFORM NOW", use_container_width=True): 
         st.session_state.page = "auth"
         st.rerun()
     st.caption("Secure v5.0")
-    
+                                
