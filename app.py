@@ -128,13 +128,13 @@ elif st.session_state.user:
     st.markdown(f"<div class='balance-box'><h3>BALANCE</h3><h1>₱{max(0.0, wallet):,.2f}</h1></div>", unsafe_allow_html=True)
     
     c1, c2, c3 = st.columns(3)
-    if c1.button("📥 DEP"): st.session_state.action_type = "DEP"
-    if c2.button("📤 WIT"): st.session_state.action_type = "WIT"
-    if c3.button("🔄 REI"): st.session_state.action_type = "REI"
+    if c1.button("📥 DEPOSIT CAPITAL"): st.session_state.action_type = "DEPOSIT CAPITAL"
+    if c2.button("📤 WITHDRAW BALANCE"): st.session_state.action_type = "WITHDRAW BALANCE"
+    if c3.button("🔄 REINVEST"): st.session_state.action_type = "REINVEST"
 
-    if st.session_state.action_type == "DEP":
+    if st.session_state.action_type == "DEPOSIT CAPITAL":
         with st.form("d"):
-            amt_d = st.number_input("Amount", 500.0)
+            amt_d = st.number_input("Amount", 1000.0)
             st.file_uploader("Receipt", type=['jpg','png','jpeg'])
             if st.form_submit_button("SUBMIT"):
                 data.setdefault('pending_actions', []).append({"type":"DEPOSIT", "amount":amt_d, "request_id":req_id})
@@ -143,9 +143,9 @@ elif st.session_state.user:
                 st.session_state.action_type=None
                 st.rerun()
 
-    if st.session_state.action_type == "WIT":
+    if st.session_state.action_type == "WITHDRAW BALANCE":
         with st.form("w"):
-            amt_w = st.number_input("Amount", 500.0, max_value=max(500.0, wallet))
+            amt_w = st.number_input("Amount", 1000.0, max_value=max(1000.0, wallet))
             bank = st.text_input("Bank name, Account name, Account number")
             if st.form_submit_button("SUBMIT"):
                 if wallet >= amt_w:
@@ -156,7 +156,7 @@ elif st.session_state.user:
                     st.session_state.action_type=None
                     st.rerun()
 
-    if st.session_state.action_type == "REI":
+    if st.session_state.action_type == "REINVEST":
         with st.form("r"):
             amt_r = st.number_input("Reinvest", 0.0, max_value=max(0.0, wallet))
             if st.form_submit_button("CONFIRM"):
@@ -243,7 +243,7 @@ else:
     
     st.title("ISMEX PHILIPPINES 📊")
     st.write("International Stock Market Exchange")
-    if st.button("🚀 ENTER PLATFORM NOW", use_container_width=True): 
+    if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): 
         st.session_state.page = "auth"
         st.rerun()
     st.caption("Secure v5.0")
