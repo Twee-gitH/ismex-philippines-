@@ -15,11 +15,11 @@ st.markdown("""
     .stApp { background-color: #0e1117 !important; color: white; }
     .balance-box {
         background: linear-gradient(135deg, #1e222d 0%, #0e1117 100%);
-        padding: 1rem; border-radius: 15px; border: 2px solid #00ff88;
-        text-align: center; margin-bottom: 15px;
+        padding: 0.8rem; border-radius: 15px; border: 2px solid #00ff88;
+        text-align: center; margin-bottom: 12px;
     }
-    .balance-box h3 { font-size: 0.8rem; margin: 0; color: #8b949e; }
-    .balance-box h1 { font-size: 1.8rem; margin: 0; color: #00ff88; }
+    .balance-box h3 { font-size: 0.7rem; margin: 0; color: #8b949e; letter-spacing: 1px; }
+    .balance-box h1 { font-size: 1.6rem; margin: 0; color: #00ff88; }
     .cap-card {
         background: #1c2128; padding: 20px; border-radius: 15px;
         margin-bottom: 15px; border: 1px solid #30363d;
@@ -28,7 +28,7 @@ st.markdown("""
         background: #1c2128; padding: 15px; border-radius: 12px;
         margin-bottom: 10px; border-left: 5px solid #00ff88;
     }
-    .main .block-container { padding: 1.5rem !important; }
+    .main .block-container { padding: 1rem !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -83,8 +83,8 @@ if st.session_state.is_boss:
         st.rerun()
     
     reg = load_reg()
-    # RESTORED: Added History tab for Admin
-    t1, t2, t3 = st.tabs(["📥 APPROVALS", "👥 MEMBERS", "📜 ALL HISTORY"])
+    # ADDED: t3 for History view
+    t1, t2, t3 = st.tabs(["📥 APPROVALS", "👥 MEMBERS", "📜 USER HISTORY"])
     
     with t1:
         for u, u_data in reg.items():
@@ -117,10 +117,14 @@ if st.session_state.is_boss:
         st.table([{"NAME": n, "PIN": i.get('pin'), "WALLET": i.get('wallet'), "REF": i.get('ref_by')} for n, i in reg.items()])
     
     with t3:
-        # NEW: Global history view for the owner
-        for user_name, user_info in reg.items():
-            for h in user_info.get('history', []):
-                st.write(f"**{user_name}**: {h['type']} | ₱{h['amount']:,} | {h['status']} | {h.get('date', '')}")
+        # LOGIC: Loop through all users to show transaction history
+        for u_name, u_info in reg.items():
+            u_hist = u_info.get('history', [])
+            if u_hist:
+                st.markdown(f"**Investor: {u_name}**")
+                for h in reversed(u_hist):
+                    st.write(f"﹂ {h['type']} | ₱{h['amount']:,.2f} | {h['status']} | {h.get('date','')}")
+                st.markdown("---")
 
 # ==========================================
 # 4. USER DASHBOARD & TRANSACTION LOGIC
@@ -132,7 +136,6 @@ elif st.session_state.user:
     ph_now = datetime.now() + timedelta(hours=8)
     req_id = ph_now.strftime("%f")
 
-    # FIXED: Smaller Balance Box
     st.markdown(f"<div class='balance-box'><h3>AVAILABLE BALANCE</h3><h1>₱{max(0.0, wallet):,.2f}</h1></div>", unsafe_allow_html=True)
     
     c1, c2, c3 = st.columns(3)
@@ -183,24 +186,15 @@ elif st.session_state.user:
     st.markdown("---")
     st.markdown("""
         <style>
-        .stButton > button {
-            font-size: 8px !important;
-            height: 25px !important;
-            padding-top: 0px !important;
-            padding-bottom: 0px !important;
-            min-height: 25px !important;
-            line-height: 25px !important;
-        }
+        .stButton > button { font-size: 8px !important; height: 25px !important; min-height: 25px !important; }
         </style>
         """, unsafe_allow_html=True)
 
     st.markdown("### 🔗 Referral Link")
     reflink = f"https://ismex-ph.streamlit.app/?ref={st.session_state.user}"
     st.code(reflink, language="markdown")
-    # DELETED: Extra text box removed to save space
-    
+
     st.markdown("### 👥 My Referrals")
-    # FIXED: Indented Referral Table
     h1, h2, h3 = st.columns([2, 2, 1.5])
     h1.caption("INVESTOR")
     h2.caption("1ST DEPOSIT")
@@ -213,7 +207,6 @@ elif st.session_state.user:
             ref_invest = ref_data.get('inv', [])
             f_dep = ref_invest[0]['amount'] if ref_invest else 0
             comm = f_dep * 0.20
-            
             with st.container():
                 col1, col2, col3 = st.columns([2, 2, 1.5])
                 col1.write(f"**{ref_name}**")
@@ -234,6 +227,12 @@ elif st.session_state.user:
         end_dt = start_dt + timedelta(days=7)
         pull_out_end = end_dt + timedelta(hours=1)
         
+        # AUTO-REINVEST: Reset cycle if 1-hour window is missed
+        if ph_now > pull_out_end:
+            item['start_time'] = ph_now.isoformat()
+            save(st.session_state.user, data)
+            st.rerun()
+
         elapsed = (ph_now - start_dt).total_seconds()
         progress = min(1.0, elapsed / 604800)
         roi_total = item['amount'] * 0.20
@@ -246,8 +245,11 @@ elif st.session_state.user:
                 <span style="color: #00ff88; font-weight: bold;">ROI: ₱{roi_total:,.2f}</span>
             </div>
             <div style="margin-top: 5px; color: white; font-size: 0.9em;">LIVE PROFIT: ₱{live_profit:,.2f}</div>
-            <div style="color: #e3b341; font-size: 0.8em; margin-top: 10px;">
-                ⚠️ Ready on: {end_dt.strftime('%Y-%m-%d %I:%M %p')}
+            <div style="color: #e3b341; font-size: 0.8em; margin-top: 10px; line-height: 1.3;">
+                ⚠️ <b>STRICT 1-HOUR WINDOW:</b><br>
+                Capital & Interest ready to pull out on:<br>
+                <b>{end_dt.strftime('%Y-%m-%d %I:%M %p')}</b> until <b>{pull_out_end.strftime('%I:%M %p')}</b><br>
+                <i style="color: #ff4b4b;">*Auto-reinvests after {pull_out_end.strftime('%I:%M %p')}</i>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -284,8 +286,8 @@ elif st.session_state.page == "auth":
     with t2:
         inv_n = st.session_state.get('captured_ref', 'OFFICIAL')
         st.write(f"Invitor: {inv_n}")
-        nu = st.text_input("FULL NAME").upper().strip()
-        np = st.text_input("PIN (4 digits)", type="password", max_chars=4)
+        nu = st.text_input("1stname middlename lastname").upper().strip()
+        np = st.text_input("PIN (6 digits)", type="password", max_chars=6)
         if st.button("CREATE"):
             save(nu, {"pin":np, "wallet":0.0, "ref_by":inv_n, "inv":[], "history":[], "pending_actions":[], "has_deposited":False})
             st.success("Done!")
@@ -298,4 +300,4 @@ else:
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): 
         st.session_state.page = "auth"
         st.rerun()
-    
+                
