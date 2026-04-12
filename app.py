@@ -15,9 +15,11 @@ st.markdown("""
     .stApp { background-color: #0e1117 !important; color: white; }
     .balance-box {
         background: linear-gradient(135deg, #1e222d 0%, #0e1117 100%);
-        padding: 2rem; border-radius: 20px; border: 2px solid #00ff88;
-        text-align: center; margin-bottom: 20px;
+        padding: 1rem; border-radius: 15px; border: 2px solid #00ff88;
+        text-align: center; margin-bottom: 15px;
     }
+    .balance-box h3 { font-size: 0.8rem; margin: 0; color: #8b949e; }
+    .balance-box h1 { font-size: 1.8rem; margin: 0; color: #00ff88; }
     .cap-card {
         background: #1c2128; padding: 20px; border-radius: 15px;
         margin-bottom: 15px; border: 1px solid #30363d;
@@ -81,7 +83,8 @@ if st.session_state.is_boss:
         st.rerun()
     
     reg = load_reg()
-    t1, t2 = st.tabs(["📥 APPROVALS", "👥 MEMBERS"])
+    # RESTORED: Added History tab for Admin
+    t1, t2, t3 = st.tabs(["📥 APPROVALS", "👥 MEMBERS", "📜 ALL HISTORY"])
     
     with t1:
         for u, u_data in reg.items():
@@ -112,6 +115,12 @@ if st.session_state.is_boss:
                         st.rerun()
     with t2:
         st.table([{"NAME": n, "PIN": i.get('pin'), "WALLET": i.get('wallet'), "REF": i.get('ref_by')} for n, i in reg.items()])
+    
+    with t3:
+        # NEW: Global history view for the owner
+        for user_name, user_info in reg.items():
+            for h in user_info.get('history', []):
+                st.write(f"**{user_name}**: {h['type']} | ₱{h['amount']:,} | {h['status']} | {h.get('date', '')}")
 
 # ==========================================
 # 4. USER DASHBOARD & TRANSACTION LOGIC
@@ -123,11 +132,12 @@ elif st.session_state.user:
     ph_now = datetime.now() + timedelta(hours=8)
     req_id = ph_now.strftime("%f")
 
-    st.markdown(f"<div class='balance-box'><h3>BALANCE</h3><h1>₱{max(0.0, wallet):,.2f}</h1></div>", unsafe_allow_html=True)
+    # FIXED: Smaller Balance Box
+    st.markdown(f"<div class='balance-box'><h3>AVAILABLE BALANCE</h3><h1>₱{max(0.0, wallet):,.2f}</h1></div>", unsafe_allow_html=True)
     
     c1, c2, c3 = st.columns(3)
-    if c1.button("📥 DEPOSIT CAPITAL"): st.session_state.action_type = "DEPOSIT CAPITAL"
-    if c2.button("📤 WITHDRAW BALANCE"): st.session_state.action_type = "WITHDRAW BALANCE"
+    if c1.button("📥 DEPOSIT"): st.session_state.action_type = "DEPOSIT CAPITAL"
+    if c2.button("📤 WITHDRAW"): st.session_state.action_type = "WITHDRAW BALANCE"
     if c3.button("🔄 REINVEST"): st.session_state.action_type = "REINVEST"
 
     if st.button("LOGOUT"): 
@@ -148,7 +158,7 @@ elif st.session_state.user:
     if st.session_state.action_type == "WITHDRAW BALANCE":
         with st.form("w"):
             amt_w = st.number_input("Amount", 1000.0, max_value=max(1000.0, wallet))
-            bank = st.text_input("Bank name, Account name, Account number")
+            bank = st.text_input("Bank details (Bank, Name, Account #)")
             if st.form_submit_button("SUBMIT"):
                 if wallet >= amt_w:
                     data['wallet'] = max(0.0, wallet - amt_w)
@@ -160,7 +170,7 @@ elif st.session_state.user:
 
     if st.session_state.action_type == "REINVEST":
         with st.form("r"):
-            amt_r = st.number_input("Reinvest", 0.0, max_value=max(0.0, wallet))
+            amt_r = st.number_input("Reinvest Amount", 0.0, max_value=max(0.0, wallet))
             if st.form_submit_button("CONFIRM"):
                 if wallet >= amt_r and amt_r > 0:
                     data['wallet'] = max(0.0, wallet - amt_r)
@@ -184,58 +194,40 @@ elif st.session_state.user:
         </style>
         """, unsafe_allow_html=True)
 
-    st.markdown("### 🔗 Your Referral Link")
-        reflink = f"https://ismex-ph.streamlit.app/?ref={st.session_state.user}"
+    st.markdown("### 🔗 Referral Link")
+    reflink = f"https://ismex-ph.streamlit.app/?ref={st.session_state.user}"
     st.code(reflink, language="markdown")
-    st.info("Copy the link above and share it with your friends!")
+    # DELETED: Extra text box removed to save space
     
-    # Then your referral table or running capitals starts here...
+    st.markdown("### 👥 My Referrals")
+    # FIXED: Indented Referral Table
+    h1, h2, h3 = st.columns([2, 2, 1.5])
+    h1.caption("INVESTOR")
+    h2.caption("1ST DEPOSIT")
+    h3.caption("ACTION")
 
-# Table Header
-h_col1, h_col2, h_col3 = st.columns([2, 2, 1.5])
-h_col1.caption("INVESTOR")
-h_col2.caption("1ST DEPOSIT")
-h_col3.caption("ACTION")
+    my_refs = [name for name, info in reg.items() if info.get('ref_by') == st.session_state.user]
+    if my_refs:
+        for ref_name in my_refs:
+            ref_data = reg[ref_name]
+            ref_invest = ref_data.get('inv', [])
+            f_dep = ref_invest[0]['amount'] if ref_invest else 0
+            comm = f_dep * 0.20
+            
+            with st.container():
+                col1, col2, col3 = st.columns([2, 2, 1.5])
+                col1.write(f"**{ref_name}**")
+                col2.write(f"₱{f_dep:,.2f}")
+                if f_dep > 0:
+                    if col3.button(f"CLAIM ₱{comm:,.0f}", key=f"r_{ref_name}"):
+                        data.setdefault('pending_actions', []).append({'type': 'Commission','from': st.session_state.user,'amount': comm,'referral_name': ref_name,'status': 'Pending'})
+                        save(st.session_state.user, data)
+                        st.success("Requested!")
+                else: col3.info("No Dep.")
+            st.markdown("---")
+    else:
+        st.write("No referrals yet.")
 
-# Filter data for users invited by current user
-my_refs = [name for name, info in reg.items() if info.get('ref_by') == st.session_state.user]
-
-if my_refs:
-    for ref_name in my_refs:
-        ref_data = reg[ref_name]
-        ref_investments = ref_data.get('inv', [])
-        first_dep = ref_investments[0]['amount'] if ref_investments else 0
-        commission = first_dep * 0.20
-        
-        # Row Container
-        with st.container():
-            col1, col2, col3 = st.columns([2, 2, 1.5])
-            
-            # Column 1: Name
-            col1.markdown(f"**{ref_name}**")
-            
-            # Column 2: Amount
-            col2.markdown(f"₱{first_dep:,.2f}")
-            
-            # Column 3: Request Button
-            if first_dep > 0:
-                if col3.button(f"CLAIM ₱{commission:,.0f}", key=f"req_{ref_name}", use_container_width=True):
-                    data.setdefault('pending_actions', []).append({
-                        'type': 'Commission',
-                        'from': st.session_state.user,
-                        'amount': commission,
-                        'referral_name': ref_name,
-                        'status': 'Pending'
-                    })
-                    save(st.session_state.user, data)
-                    st.success(f"Request for {ref_name} sent!")
-            else:
-                col3.info("No Dep.")
-        st.markdown("---") # Thin line between rows
-else:
-    st.write("No referrals yet. Start sharing your link!")
-    
-        
     st.subheader("🚀 RUNNING CAPITALS")
     for idx, item in enumerate(list(data.get('inv', []))):
         start_dt = datetime.fromisoformat(item['start_time'])
@@ -255,8 +247,7 @@ else:
             </div>
             <div style="margin-top: 5px; color: white; font-size: 0.9em;">LIVE PROFIT: ₱{live_profit:,.2f}</div>
             <div style="color: #e3b341; font-size: 0.8em; margin-top: 10px;">
-                ⚠️ Capital and interest available to pull out on:<br>
-                {end_dt.strftime('%Y-%m-%d %I:%M %p')} until {pull_out_end.strftime('%I:%M %p')}
+                ⚠️ Ready on: {end_dt.strftime('%Y-%m-%d %I:%M %p')}
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -276,7 +267,7 @@ else:
             save(st.session_state.user, data)
             st.rerun()
 
-    st.subheader("📜 HISTORY")
+    st.subheader("📜 MY HISTORY")
     for h in reversed(data.get('history', [])):
         st.markdown(f"<div class='hist-card'>{h['type']} | ₱{h['amount']:,.2f} | {h['status']}</div>", unsafe_allow_html=True)
 
@@ -303,11 +294,8 @@ else:
     if st.button("🔒"): 
         st.session_state.page = "boss_key"
         st.rerun()
-    
     st.title("ISMEX PHILIPPINES")
-    st.write("International Stock Market Exchange")
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): 
         st.session_state.page = "auth"
         st.rerun()
-    st.caption("Secure v5.0")
-                        
+    
