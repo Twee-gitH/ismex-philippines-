@@ -274,6 +274,9 @@ elif st.session_state.user:
     for h in reversed(data.get('history', [])):
         st.markdown(f"<p style='font-size:12px; margin:2px 0; color:#8b949e;'>• {h['type']} | ₱{h['amount']:,.2f} | <span style='color:#00ff88;'>{h['status']}</span></p>", unsafe_allow_html=True)
 
+# ==========================================
+# 5. NAVIGATION LOGIC (FIXED ORDER)
+# ==========================================
 elif st.session_state.page == "auth":
     t1, t2 = st.tabs(["LOGIN", "REGISTER"])
     with t1:
@@ -290,9 +293,14 @@ elif st.session_state.page == "auth":
         nu = st.text_input("1stname middlename lastname").upper().strip()
         np = st.text_input("PIN (6 digits)", type="password", max_chars=6)
         if st.button("CREATE"):
-            save(nu, {"pin":np, "wallet":0.0, "ref_by":inv_n, "inv":[], "history":[], "pending_actions":[], "has_deposited":False})
-            st.success("Done!")
-            st.rerun()
+            if nu and np: # Added a small check to ensure fields aren't empty
+                save(nu, {"pin":np, "wallet":0.0, "ref_by":inv_n, "inv":[], "history":[], "pending_actions":[], "has_deposited":False})
+                st.success("Done!")
+                st.rerun()
+            else:
+                st.error("Please fill in all fields")
+
+# THE 'ELSE' MUST BE LAST
 else:
     if st.button("🔒"): 
         st.session_state.page = "boss_key"
@@ -301,4 +309,5 @@ else:
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): 
         st.session_state.page = "auth"
         st.rerun()
+        
     
