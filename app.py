@@ -158,8 +158,8 @@ elif st.session_state.user:
 
     if st.session_state.action_type == "WITHDRAW BALANCE":
         with st.form("w"):
-            amt_w = st.number_input("Amount", 1000.0, max_value=max(1000.0, wallet))
-            bank = st.text_input("Bank details (Bank, Name, Account #)")
+            amt_w = st.number_input("Amount", 1000.0, max_value=max(1000000.0, wallet))
+            bank = st.text_input("Bank name, Account name, Account#")
             if st.form_submit_button("SUBMIT"):
                 if wallet >= amt_w:
                     data['wallet'] = max(0.0, wallet - amt_w)
