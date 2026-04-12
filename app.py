@@ -70,7 +70,6 @@ if st.session_state.user:
     ph_now = datetime.now() + timedelta(hours=8)
     req_id = ph_now.strftime("%f")
 
-    # --- TOP BALANCE UI ---
     st.markdown(f"<div class='balance-box'><h3>AVAILABLE BALANCE</h3><h1>₱{max(0.0, wallet):,.2f}</h1></div>", unsafe_allow_html=True)
     
     c1, c2, c3 = st.columns(3)
@@ -82,7 +81,6 @@ if st.session_state.user:
         st.session_state.user = None
         st.rerun()
         
-    # --- TRANSACTION FORMS ---
     if st.session_state.action_type == "DEPOSIT CAPITAL":
         with st.form("d"):
             amt_d = st.number_input("Amount", 1000.0)
@@ -121,11 +119,13 @@ if st.session_state.user:
                     st.session_state.action_type=None
                     st.rerun()
 
-    # --- REFERRAL SECTION (FIXED EDITOR BUG) ---
+    # --- REFERRAL SECTION (SPACING FIXED) ---
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     base_url = "https://twee-gith.github.io/ismex-philippines-/"
     u_ref = st.session_state.user.replace(' ', '%20')
     reflink = base_url + "?ref=" + u_ref
+    
+    # FIXED INDENTATION HERE:
     st.text_input("Link", value=reflink, label_visibility="collapsed")
     
     copy_js = "<script>function copyRef() { "
@@ -138,7 +138,6 @@ if st.session_state.user:
     copy_js += '<button onclick="copyRef()" style="width: 100%; background-color: #1c2128; color: #00ff88; border: 1px solid #00ff88; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold;">📋 COPY REFERRAL LINK</button>'
     st.components.v1.html(copy_js, height=60)
 
-    # --- MY REFERRALS LIST ---
     st.markdown("<h4 style='margin-bottom:5px;'>👥 My Referrals</h4>", unsafe_allow_html=True)
     h1, h2, h3 = st.columns([2, 1.5, 1.5])
     h1.caption("INVESTOR"); h2.caption("DEPOSIT"); h3.caption("ACTION")
@@ -163,7 +162,7 @@ if st.session_state.user:
                     col3.markdown("<p style='font-size:10px; color:gray; margin:0;'>No Dep.</p>", unsafe_allow_html=True)
             st.markdown("<hr style='margin:2px 0;'>", unsafe_allow_html=True)
 
-    # --- RUNNING CAPITALS (FULL LOGIC + WINDOW TEXT) ---
+    # --- RUNNING CAPITALS (FULL LOGIC) ---
     st.subheader("🚀 RUNNING CAPITALS")
     for idx, item in enumerate(list(data.get('inv', []))):
         start_dt = datetime.fromisoformat(item['start_time'])
@@ -209,13 +208,12 @@ if st.session_state.user:
             save(st.session_state.user, data)
             st.rerun()
 
-    # --- HISTORY LEDGER ---
     st.markdown("<h4 style='margin-top:20px;'>📜 My History</h4>", unsafe_allow_html=True)
     for h in reversed(data.get('history', [])):
         st.markdown(f"<p style='font-size:12px; margin:2px 0; color:#8b949e;'>• {h['type']} | ₱{h['amount']:,.2f} | <span style='color:#00ff88;'>{h['status']}</span></p>", unsafe_allow_html=True)
 
 # ==========================================
-# 4. NAVIGATION & AUTH (ADMIN & LANDING)
+# 4. NAVIGATION & AUTH
 # ==========================================
 elif st.session_state.page == "boss_key":
     boss_pass = st.text_input("Key", type="password", placeholder="Enter Key")
