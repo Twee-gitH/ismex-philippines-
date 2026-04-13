@@ -52,6 +52,10 @@ def load_reg():
 def save(n, d): 
     db.collection("investors").document(n).set(d)
 
+# Data Integrity: Atomic Update
+def update_field(n, updates):
+    db.collection("investors").document(n).update(updates)
+
 if 'user' not in st.session_state: st.session_state.user = None
 if 'page' not in st.session_state: st.session_state.page = 'landing'
 if 'is_boss' not in st.session_state: st.session_state.is_boss = False
@@ -119,7 +123,7 @@ if st.session_state.user:
                     st.session_state.action_type=None
                     st.rerun()
 
-    # --- REFERRAL SECTION (FIXED LINE 131) ---
+    # --- REFERRAL SECTION ---
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     base_url = "https://twee-gith.github.io/ismex-philippines-/"
     u_ref = st.session_state.user.replace(' ', '%20')
@@ -144,36 +148,33 @@ if st.session_state.user:
     h1, h2, h3 = st.columns([2, 1.5, 1.5])
     h1.caption("INVESTOR"); h2.caption("DEPOSIT"); h3.caption("ACTION")
 
+    claimed_list = data.get('claimed_refs', [])
     my_refs = [name for name, info in reg.items() if info.get('ref_by') == st.session_state.user]
+    
     if my_refs:
         for ref_name in my_refs:
             ref_data = reg[ref_name]
             ref_invest = ref_data.get('inv', [])
             f_dep = ref_invest[0]['amount'] if ref_invest else 0
             comm = f_dep * 0.20
+            
             with st.container():
                 col1, col2, col3 = st.columns([2, 1.5, 1.5])
                 col1.markdown(f"<p style='font-size:12px; margin:0;'>{ref_name}</p>", unsafe_allow_html=True)
                 col2.markdown(f"<p style='font-size:12px; margin:0;'>₱{f_dep:,.0f}</p>", unsafe_allow_html=True)
-                if f_dep > 0:
+                
+                if f_dep > 0 and ref_name not in claimed_list:
                     if col3.button(f"CLAIM ₱{comm:,.0f}", key=f"r_{ref_name}", use_container_width=True):
-                        data.setdefault('pending_actions', []).append({'type': 'Commission','from': st.session_state.user,'amount': comm,'referral_name': ref_name,'status': 'Pending'})
+                        data['wallet'] += comm
+                        data.setdefault('claimed_refs', []).append(ref_name)
                         save(st.session_state.user, data)
-                        st.success("Sent!")
+                        st.success("Commission added!")
+                        st.rerun()
+                elif ref_name in claimed_list:
+                    col3.markdown("<p style='font-size:10px; color:#00ff88; margin:0;'>Claimed ✓</p>", unsafe_allow_html=True)
                 else:
                     col3.markdown("<p style='font-size:10px; color:gray; margin:0;'>No Dep.</p>", unsafe_allow_html=True)
             st.markdown("<hr style='margin:2px 0;'>", unsafe_allow_html=True)
-  
-    # Inside the referral loop
-claimed_list = data.get('claimed_refs', [])
-
-if f_dep > 0 and ref_name not in claimed_list:
-    if col3.button(f"CLAIM ₱{comm:,.0f}", key=f"r_{ref_name}"):
-        data['wallet'] += comm
-        data.setdefault('claimed_refs', []).append(ref_name)
-        save(st.session_state.user, data)
-        st.success("Commission added!")
-        st.rerun()
 
     # --- RUNNING CAPITALS ---
     st.subheader("🚀 RUNNING CAPITALS")
@@ -193,29 +194,31 @@ if f_dep > 0 and ref_name not in claimed_list:
         live_profit = progress * roi_total
 
         st.markdown(f"""
-        <div style="background-color: #1c2128; padding: 15px; border-radius: 10px; border-left: 5px solid #00ff88; margin-bottom: 10px;">
+        <div style="background-color: #1c2128; padding: 15px; border-radius: 10px; border-left: 5px solid #00ff88; margin-bottom: 5px;">
             <div style="display: flex; justify-content: space-between;">
                 <span style="color: #8b949e; font-weight: bold;">CAPITAL: ₱{item['amount']:,.2f}</span>
                 <span style="color: #00ff88; font-weight: bold;">ROI: ₱{roi_total:,.2f}</span>
             </div>
             <div style="margin-top: 5px; color: white; font-size: 0.9em;">LIVE PROFIT: ₱{live_profit:,.2f}</div>
-            <div style="color: #e3b341; font-size: 0.8em; margin-top: 10px; line-height: 1.3;">
-                ⚠️ <b>STRICT 1-HOUR WINDOW:</b><br>
-                Capital & Interest ready to pull out on:<br>
-                <b>{end_dt.strftime('%Y-%m-%d %I:%M %p')}</b> until <b>{pull_out_end.strftime('%I:%M %p')}</b><br>
-                <i style="color: #ff4b4b;">*Auto-reinvests after {pull_out_end.strftime('%I:%M %p')}</i>
-            </div>
         </div>
+        """, unsafe_allow_html=True)
+        st.progress(progress) # UI POLISHING: Progress Bar
+        
+        st.markdown(f"""
+            <div style="color: #e3b341; font-size: 0.8em; margin-bottom: 10px; line-height: 1.3;">
+                ⚠️ <b>STRICT 1-HOUR WINDOW:</b><br>
+                Ready on: <b>{end_dt.strftime('%Y-%m-%d %I:%M %p')}</b> until <b>{pull_out_end.strftime('%I:%M %p')}</b>
+            </div>
         """, unsafe_allow_html=True)
         
         is_op = end_dt <= ph_now <= pull_out_end
         ca, cb = st.columns(2)
-        if ca.button("press here to CLAIM INTEREST on schedule", key=f"int_{idx}", disabled=not is_op, use_container_width=True):
+        if ca.button("CLAIM INTEREST", key=f"int_{idx}", disabled=not is_op, use_container_width=True):
             data['wallet'] += roi_total
             item['start_time'] = ph_now.isoformat()
             save(st.session_state.user, data)
             st.rerun()
-        if cb.button("press here to PULL OUT CAPITAL on schedule", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
+        if cb.button("PULL OUT CAPITAL", key=f"pull_{idx}", disabled=not is_op, use_container_width=True):
             data['wallet'] += (item['amount'] + roi_total)
             data['inv'].pop(idx)
             save(st.session_state.user, data)
@@ -252,20 +255,22 @@ elif st.session_state.page == "admin" and st.session_state.is_boss:
                     c1, c2 = st.columns(2)
                     if c1.button("APPROVE", key=f"ap_{u}_{idx}"):
                         ph = datetime.now() + timedelta(hours=8)
-                        if act['type'] == "DEPOSIT" and not u_data.get('has_deposited'):
-                            inv = u_data.get('ref_by', 'OFFICIAL')
-                            if inv in reg:
-                                reg[inv]['wallet'] = reg[inv].get('wallet', 0) + (act['amount'] * 0.20)
-                                save(inv, reg[inv])
-                            u_data['has_deposited'] = True
+                        # Process Deposit logic
                         if act['type'] in ["DEPOSIT", "REINVEST"]:
                             u_data.setdefault('inv', []).append({"amount": act['amount'], "start_time": ph.isoformat()})
+                        
+                        # Update history status
                         for h in u_data.get('history', []):
                             if h.get('request_id') == act.get('request_id'): h['status'] = "CONFIRMED"
-                        u_data['pending_actions'].pop(idx); save(u, u_data); st.rerun()
+                        
+                        u_data['pending_actions'].pop(idx)
+                        save(u, u_data)
+                        st.rerun()
                     if c2.button("REJECT", key=f"rj_{u}_{idx}"):
                         if act['type'] in ["WITHDRAW", "REINVEST"]: u_data['wallet'] += act['amount']
-                        u_data['pending_actions'].pop(idx); save(u, u_data); st.rerun()
+                        u_data['pending_actions'].pop(idx)
+                        save(u, u_data)
+                        st.rerun()
     with t2:
         st.table([{"NAME": n, "PIN": i.get('pin'), "WALLET": i.get('wallet'), "REF": i.get('ref_by')} for n, i in reg.items()])
     with t3:
@@ -291,11 +296,11 @@ elif st.session_state.page == "auth":
         np = st.text_input("PIN (6 digits)", type="password", max_chars=6)
         if st.button("CREATE"):
             if nu and len(np) == 6:
-                save(nu, {"pin":np, "wallet":0.0, "ref_by":inv_n, "inv":[], "history":[], "pending_actions":[], "has_deposited":False})
+                save(nu, {"pin":np, "wallet":0.0, "ref_by":inv_n, "inv":[], "history":[], "pending_actions":[], "has_deposited":False, "claimed_refs":[]})
                 st.success("Done!"); time.sleep(1); st.rerun()
 
 else:
     st.title("ISMEX PHILIPPINES")
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): st.session_state.page = "auth"; st.rerun()
     if st.button("🔒"): st.session_state.page = "boss_key"; st.rerun()
-                
+        
