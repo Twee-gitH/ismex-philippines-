@@ -10,27 +10,27 @@ import time
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
 st.markdown("""
-    <style>
-    header, [data-testid="stToolbar"], footer { visibility: hidden !important; display: none !important; }
-    .stApp { background-color: #0e1117 !important; color: white; }
-    .balance-box {
-        background: linear-gradient(135deg, #1e222d 0%, #0e1117 100%);
-        padding: 0.8rem; border-radius: 15px; border: 2px solid #00ff88;
-        text-align: center; margin-bottom: 12px;
-    }
-    .balance-box h3 { font-size: 0.7rem; margin: 0; color: #8b949e; letter-spacing: 1px; }
-    .balance-box h1 { font-size: 1.6rem; margin: 0; color: #00ff88; }
-    .cap-card {
-        background: #1c2128; padding: 20px; border-radius: 15px;
-        margin-bottom: 15px; border: 1px solid #30363d;
-    }
-    .hist-card {
-        background: #1c2128; padding: 15px; border-radius: 12px;
-        margin-bottom: 10px; border-left: 5px solid #00ff88;
-    }
-    .main .block-container { padding: 1rem !important; }
-    </style>
-    """, unsafe_allow_html=True)
+<style>
+header, [data-testid="stToolbar"], footer { visibility: hidden !important; display: none !important; }
+.stApp { background-color: #0e1117 !important; color: white; }
+.balance-box {
+    background: linear-gradient(135deg, #1e222d 0%, #0e1117 100%);
+    padding: 0.8rem; border-radius: 15px; border: 2px solid #00ff88;
+    text-align: center; margin-bottom: 12px;
+}
+.balance-box h3 { font-size: 0.7rem; margin: 0; color: #8b949e; letter-spacing: 1px; }
+.balance-box h1 { font-size: 1.6rem; margin: 0; color: #00ff88; }
+.cap-card {
+    background: #1c2128; padding: 20px; border-radius: 15px;
+    margin-bottom: 15px; border: 1px solid #30363d;
+}
+.hist-card {
+    background: #1c2128; padding: 15px; border-radius: 12px;
+    margin-bottom: 10px; border-left: 5px solid #00ff88;
+}
+.main .block-container { padding: 1rem !important; }
+</style>
+""", unsafe_allow_html=True)
 
 # ==========================================
 # 2. DATABASE & STATE MANAGEMENT
@@ -119,7 +119,7 @@ if st.session_state.user:
                     st.session_state.action_type=None
                     st.rerun()
 
-    # --- REFERRAL SECTION (FIXED INDENTATION) ---
+    # --- REFERRAL SECTION ---
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     base_url = "https://twee-gith.github.io/ismex-philippines-/"
     u_ref = st.session_state.user.replace(' ', '%20')
@@ -127,17 +127,17 @@ if st.session_state.user:
     st.text_input("Link", value=reflink, label_visibility="collapsed")
     
     copy_js = f"""
-    <script>
-    function copyRef() {{
-        const el = document.createElement('textarea');
-        el.value = '{reflink}';
-        document.body.appendChild(el); el.select();
-        document.execCommand('copy');
-        document.body.removeChild(el); alert('Referral Link Copied!');
-    }}
-    </script>
-    <button onclick="copyRef()" style="width: 100%; background-color: #1c2128; color: #00ff88; border: 1px solid #00ff88; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold;">📋 COPY REFERRAL LINK</button>
-    """
+<script>
+function copyRef() {{
+    const el = document.createElement('textarea');
+    el.value = '{reflink}';
+    document.body.appendChild(el); el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el); alert('Referral Link Copied!');
+}}
+</script>
+<button onclick="copyRef()" style="width: 100%; background-color: #1c2128; color: #00ff88; border: 1px solid #00ff88; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold;">📋 COPY REFERRAL LINK</button>
+"""
     st.components.v1.html(copy_js, height=60)
 
     st.markdown("<h4 style='margin-bottom:5px;'>👥 My Referrals</h4>", unsafe_allow_html=True)
@@ -189,20 +189,20 @@ if st.session_state.user:
         live_profit = progress * roi_total
 
         st.markdown(f"""
-        <div style="background-color: #1c2128; padding: 15px; border-radius: 10px; border-left: 5px solid #00ff88; margin-bottom: 10px;">
-            <div style="display: flex; justify-content: space-between;">
-                <span style="color: #8b949e; font-weight: bold;">CAPITAL: ₱{item['amount']:,.2f}</span>
-                <span style="color: #00ff88; font-weight: bold;">ROI: ₱{roi_total:,.2f}</span>
-            </div>
-            <div style="margin-top: 5px; color: white; font-size: 0.9em;">LIVE PROFIT: ₱{live_profit:,.2f}</div>
-            <div style="color: #e3b341; font-size: 0.8em; margin-top: 10px; line-height: 1.3;">
-                ⚠️ <b>STRICT 1-HOUR WINDOW:</b><br>
-                Capital & Interest ready to pull out on:<br>
-                <b>{end_dt.strftime('%Y-%m-%d %I:%M %p')}</b> until <b>{pull_out_end.strftime('%I:%M %p')}</b><br>
-                <i style="color: #ff4b4b;">*Auto-reinvests after {pull_out_end.strftime('%I:%M %p')}</i>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+<div style="background-color: #1c2128; padding: 15px; border-radius: 10px; border-left: 5px solid #00ff88; margin-bottom: 10px;">
+    <div style="display: flex; justify-content: space-between;">
+        <span style="color: #8b949e; font-weight: bold;">CAPITAL: ₱{item['amount']:,.2f}</span>
+        <span style="color: #00ff88; font-weight: bold;">ROI: ₱{roi_total:,.2f}</span>
+    </div>
+    <div style="margin-top: 5px; color: white; font-size: 0.9em;">LIVE PROFIT: ₱{live_profit:,.2f}</div>
+    <div style="color: #e3b341; font-size: 0.8em; margin-top: 10px; line-height: 1.3;">
+        ⚠️ <b>STRICT 1-HOUR WINDOW:</b><br>
+        Capital & Interest ready to pull out on:<br>
+        <b>{end_dt.strftime('%Y-%m-%d %I:%M %p')}</b> until <b>{pull_out_end.strftime('%I:%M %p')}</b><br>
+        <i style="color: #ff4b4b;">*Auto-reinvests after {pull_out_end.strftime('%I:%M %p')}</i>
+    </div>
+</div>
+""", unsafe_allow_html=True)
         
         is_op = end_dt <= ph_now <= pull_out_end
         ca, cb = st.columns(2)
@@ -294,4 +294,4 @@ else:
     st.title("ISMEX PHILIPPINES")
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): st.session_state.page = "auth"; st.rerun()
     if st.button("🔒"): st.session_state.page = "boss_key"; st.rerun()
-                
+    
