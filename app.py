@@ -103,7 +103,7 @@ if st.session_state.user:
                     data.setdefault('history', []).append({"type":"WITHDRAW", "amount":amt_w, "status":"PENDING", "request_id":req_id, "date":ph_now.strftime("%Y-%m-%d")})
                     save(st.session_state.user, data)
                     st.success("Submitted!")
-                    time.sleep(1); st.session_state.action_type=None; st.rerun()
+                    time.sleep(1); st.session_state.action_type = None; st.rerun()
                 else:
                     st.error(f"Insufficient Balance! (₱{wallet:,.2f})")
 
@@ -116,7 +116,7 @@ if st.session_state.user:
                     data.setdefault('pending_actions', []).append({"type":"REINVEST", "amount":amt_r, "request_id":req_id})
                     data.setdefault('history', []).append({"type":"REINVEST", "amount":amt_r, "status":"PENDING", "request_id":req_id, "date":ph_now.strftime("%Y-%m-%d")})
                     save(st.session_state.user, data)
-                    st.session_state.action_type=None
+                    st.session_state.action_type = None
                     st.rerun()
 
     # --- REFERRAL SECTION ---
