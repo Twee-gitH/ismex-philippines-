@@ -138,6 +138,7 @@ if st.session_state.user:
                     st.session_state.action_type = None
                     st.rerun()
 
+    # --- REFERRAL SECTION (PRESERVED) ---
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     base_url = "https://twee-gith.github.io/ismex-philippines-/"
     u_ref = st.session_state.user.replace(' ', '%20')
@@ -161,7 +162,7 @@ function copyRef() {{
     st.markdown("<h4 style='margin-bottom:5px;'>👥 My Referrals</h4>", unsafe_allow_html=True)
     h1, h2, h3 = st.columns([2, 1.5, 1.5])
     h1.caption("INVESTOR"); h2.caption("DEPOSIT"); h3.caption("ACTION")
-
+                    
     reg_ref = load_reg()
     my_refs = [name for name, info in reg_ref.items() if info.get('ref_by') == st.session_state.user]
     claimed_list = data.get('claimed_refs', [])
