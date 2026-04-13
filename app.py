@@ -119,7 +119,7 @@ if st.session_state.user:
                     st.session_state.action_type=None
                     st.rerun()
 
-    # --- REFERRAL SECTION ---
+    # --- REFERRAL SECTION (FIXED INDENTATION) ---
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     base_url = "https://twee-gith.github.io/ismex-philippines-/"
     u_ref = st.session_state.user.replace(' ', '%20')
@@ -294,3 +294,4 @@ else:
     st.title("ISMEX PHILIPPINES")
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): st.session_state.page = "auth"; st.rerun()
     if st.button("🔒"): st.session_state.page = "boss_key"; st.rerun()
+                
