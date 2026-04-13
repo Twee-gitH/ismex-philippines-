@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import time
 
 # ==========================================
-# 1. UI CONFIGURATION (FULL CUSTOM CSS)
+# 1. UI CONFIGURATION (FULL CUSTOM CSS) - PRESERVED
 # ==========================================
 st.set_page_config(page_title="ISMEX Official", layout="wide")
 
@@ -33,7 +33,7 @@ header, [data-testid="stToolbar"], footer { visibility: hidden !important; displ
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. DATABASE & STATE MANAGEMENT
+# 2. DATABASE & STATE MANAGEMENT (OPTIMIZED)
 # ==========================================
 @st.cache_resource
 def get_db():
@@ -46,11 +46,23 @@ def get_db():
 
 db = get_db()
 
+def get_user_data(username):
+    doc = db.collection("investors").document(username).get()
+    return doc.to_dict() if doc.exists else None
+
 def load_reg(): 
     return {doc.id: doc.to_dict() for doc in db.collection("investors").stream()}
 
 def save(n, d): 
     db.collection("investors").document(n).set(d)
+
+def atomic_update(username, update_dict):
+    user_ref = db.collection("investors").document(username)
+    @firestore.transactional
+    def _do(transaction, ref):
+        transaction.update(ref, update_dict)
+    atomic_tx = db.transaction()
+    _do(atomic_tx, user_ref)
 
 if 'user' not in st.session_state: st.session_state.user = None
 if 'page' not in st.session_state: st.session_state.page = 'landing'
@@ -64,8 +76,11 @@ if "ref" in st.query_params:
 # 3. USER DASHBOARD & FULL TRANSACTION LOGIC
 # ==========================================
 if st.session_state.user:
-    reg = load_reg()
-    data = reg.get(st.session_state.user, {})
+    data = get_user_data(st.session_state.user)
+    if not data: 
+        st.session_state.user = None
+        st.rerun()
+    
     wallet = float(data.get('wallet', 0.0))
     ph_now = datetime.now() + timedelta(hours=8)
     req_id = ph_now.strftime("%f")
@@ -98,10 +113,12 @@ if st.session_state.user:
             bank = st.text_input("Bank name, Account name, Account#")
             if st.form_submit_button("SUBMIT"):
                 if wallet >= amt_w:
-                    data['wallet'] = max(0.0, wallet - amt_w)
-                    data.setdefault('pending_actions', []).append({"type":"WITHDRAW", "amount":amt_w, "request_id":req_id, "details":bank})
-                    data.setdefault('history', []).append({"type":"WITHDRAW", "amount":amt_w, "status":"PENDING", "request_id":req_id, "date":ph_now.strftime("%Y-%m-%d")})
-                    save(st.session_state.user, data)
+                    new_w = max(0.0, wallet - amt_w)
+                    pends = data.get('pending_actions', [])
+                    pends.append({"type":"WITHDRAW", "amount":amt_w, "request_id":req_id, "details":bank})
+                    hist = data.get('history', [])
+                    hist.append({"type":"WITHDRAW", "amount":amt_w, "status":"PENDING", "request_id":req_id, "date":ph_now.strftime("%Y-%m-%d")})
+                    atomic_update(st.session_state.user, {"wallet": new_w, "pending_actions": pends, "history": hist})
                     st.success("Submitted!")
                     time.sleep(1); st.session_state.action_type = None; st.rerun()
                 else:
@@ -112,14 +129,15 @@ if st.session_state.user:
             amt_r = st.number_input("Reinvest Amount", 0.0, max_value=max(0.0, wallet))
             if st.form_submit_button("CONFIRM"):
                 if wallet >= amt_r and amt_r > 0:
-                    data['wallet'] = max(0.0, wallet - amt_r)
-                    data.setdefault('pending_actions', []).append({"type":"REINVEST", "amount":amt_r, "request_id":req_id})
-                    data.setdefault('history', []).append({"type":"REINVEST", "amount":amt_r, "status":"PENDING", "request_id":req_id, "date":ph_now.strftime("%Y-%m-%d")})
-                    save(st.session_state.user, data)
+                    new_w = max(0.0, wallet - amt_r)
+                    pends = data.get('pending_actions', [])
+                    pends.append({"type":"REINVEST", "amount":amt_r, "request_id":req_id})
+                    hist = data.get('history', [])
+                    hist.append({"type":"REINVEST", "amount":amt_r, "status":"PENDING", "request_id":req_id, "date":ph_now.strftime("%Y-%m-%d")})
+                    atomic_update(st.session_state.user, {"wallet": new_w, "pending_actions": pends, "history": hist})
                     st.session_state.action_type = None
                     st.rerun()
 
-    # --- REFERRAL SECTION ---
     st.markdown("<h4 style='margin-bottom:0px;'>🔗 My Referral Link</h4>", unsafe_allow_html=True)
     base_url = "https://twee-gith.github.io/ismex-philippines-/"
     u_ref = st.session_state.user.replace(' ', '%20')
@@ -144,12 +162,13 @@ function copyRef() {{
     h1, h2, h3 = st.columns([2, 1.5, 1.5])
     h1.caption("INVESTOR"); h2.caption("DEPOSIT"); h3.caption("ACTION")
 
-    my_refs = [name for name, info in reg.items() if info.get('ref_by') == st.session_state.user]
+    reg_ref = load_reg()
+    my_refs = [name for name, info in reg_ref.items() if info.get('ref_by') == st.session_state.user]
     claimed_list = data.get('claimed_refs', [])
 
     if my_refs:
         for ref_name in my_refs:
-            ref_data = reg[ref_name]
+            ref_data = reg_ref[ref_name]
             ref_invest = ref_data.get('inv', [])
             f_dep = ref_invest[0]['amount'] if ref_invest else 0
             comm = f_dep * 0.20
@@ -160,9 +179,11 @@ function copyRef() {{
                 
                 if f_dep > 0 and ref_name not in claimed_list:
                     if col3.button(f"CLAIM ₱{comm:,.0f}", key=f"r_{ref_name}", use_container_width=True):
-                        data['wallet'] += comm
-                        data.setdefault('claimed_refs', []).append(ref_name)
-                        save(st.session_state.user, data)
+                        claimed_list.append(ref_name)
+                        atomic_update(st.session_state.user, {
+                            "wallet": firestore.Increment(comm),
+                            "claimed_refs": claimed_list
+                        })
                         st.success("Commission added!")
                         st.rerun()
                 elif ref_name in claimed_list:
@@ -171,7 +192,6 @@ function copyRef() {{
                     col3.markdown("<p style='font-size:10px; color:gray; margin:0;'>No Dep.</p>", unsafe_allow_html=True)
             st.markdown("<hr style='margin:2px 0;'>", unsafe_allow_html=True)
 
-    # --- RUNNING CAPITALS ---
     st.subheader("🚀 RUNNING CAPITALS")
     for idx, item in enumerate(list(data.get('inv', []))):
         start_dt = datetime.fromisoformat(item['start_time'])
@@ -222,7 +242,7 @@ function copyRef() {{
         st.markdown(f"<p style='font-size:12px; margin:2px 0; color:#8b949e;'>• {h['type']} | ₱{h['amount']:,.2f} | <span style='color:#00ff88;'>{h['status']}</span></p>", unsafe_allow_html=True)
 
 # ==========================================
-# 4. NAVIGATION & AUTH
+# 4. NAVIGATION & AUTH (PRESERVED)
 # ==========================================
 elif st.session_state.page == "boss_key":
     boss_pass = st.text_input("Key", type="password", placeholder="Enter Key")
@@ -238,7 +258,10 @@ elif st.session_state.page == "boss_key":
 
 elif st.session_state.page == "admin" and st.session_state.is_boss:
     st.title("👑 ADMIN")
-    if st.button("EXIT"): st.session_state.is_boss = False; st.session_state.page = "landing"; st.rerun()
+    if st.button("EXIT"): 
+        st.session_state.is_boss = False
+        st.session_state.page = "landing"
+        st.rerun()
     reg = load_reg()
     t1, t2, t3 = st.tabs(["📥 APPROVALS", "👥 MEMBERS", "📜 HISTORY"])
     with t1:
@@ -249,20 +272,38 @@ elif st.session_state.page == "admin" and st.session_state.is_boss:
                     c1, c2 = st.columns(2)
                     if c1.button("APPROVE", key=f"ap_{u}_{idx}"):
                         ph = datetime.now() + timedelta(hours=8)
-                        if act['type'] == "DEPOSIT" and not u_data.get('has_deposited'):
-                            inv = u_data.get('ref_by', 'OFFICIAL')
-                            if inv in reg:
-                                reg[inv]['wallet'] = reg[inv].get('wallet', 0) + (act['amount'] * 0.20)
-                                save(inv, reg[inv])
-                            u_data['has_deposited'] = True
-                        if act['type'] in ["DEPOSIT", "REINVEST"]:
-                            u_data.setdefault('inv', []).append({"amount": act['amount'], "start_time": ph.isoformat()})
-                        for h in u_data.get('history', []):
-                            if h.get('request_id') == act.get('request_id'): h['status'] = "CONFIRMED"
-                        u_data['pending_actions'].pop(idx); save(u, u_data); st.rerun()
+                        user_ref = db.collection("investors").document(u)
+                        
+                        @firestore.transactional
+                        def process_approval(transaction, ref):
+                            snap_doc = ref.get(transaction=transaction)
+                            snap = snap_doc.to_dict()
+                            
+                            if act['type'] == "DEPOSIT" and not snap.get('has_deposited'):
+                                inv_name = snap.get('ref_by', 'OFFICIAL')
+                                if inv_name in reg:
+                                    db.collection("investors").document(inv_name).update({"wallet": firestore.Increment(act['amount'] * 0.20)})
+                                snap['has_deposited'] = True
+                            
+                            if act['type'] in ["DEPOSIT", "REINVEST"]:
+                                snap.setdefault('inv', []).append({"amount": act['amount'], "start_time": ph.isoformat()})
+                            
+                            for h in snap.get('history', []):
+                                if h.get('request_id') == act.get('request_id'): 
+                                    h['status'] = "CONFIRMED"
+                            
+                            snap['pending_actions'].pop(idx)
+                            transaction.set(ref, snap)
+
+                        tx = db.transaction()
+                        process_approval(tx, user_ref)
+                        st.rerun()
+                        
                     if c2.button("REJECT", key=f"rj_{u}_{idx}"):
                         if act['type'] in ["WITHDRAW", "REINVEST"]: u_data['wallet'] += act['amount']
-                        u_data['pending_actions'].pop(idx); save(u, u_data); st.rerun()
+                        u_data['pending_actions'].pop(idx)
+                        save(u, u_data)
+                        st.rerun()
     with t2:
         st.table([{"NAME": n, "PIN": i.get('pin'), "WALLET": i.get('wallet'), "REF": i.get('ref_by')} for n, i in reg.items()])
     with t3:
@@ -279,8 +320,10 @@ elif st.session_state.page == "auth":
         u = st.text_input("NAME").upper().strip()
         p = st.text_input("PIN", type="password")
         if st.button("GO"):
-            r = load_reg()
-            if u in r and str(r[u].get('pin')) == p: st.session_state.user = u; st.rerun()
+            r_data = get_user_data(u)
+            if r_data and str(r_data.get('pin')) == p: 
+                st.session_state.user = u
+                st.rerun()
     with t2:
         inv_n = st.session_state.get('captured_ref', 'OFFICIAL')
         st.write(f"Invitor: {inv_n}")
@@ -293,6 +336,10 @@ elif st.session_state.page == "auth":
 
 else:
     st.title("ISMEX PHILIPPINES")
-    if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): st.session_state.page = "auth"; st.rerun()
-    if st.button("🔒"): st.session_state.page = "boss_key"; st.rerun()
+    if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): 
+        st.session_state.page = "auth"
+        st.rerun()
+    if st.button("🔒"): 
+        st.session_state.page = "boss_key"
+        st.rerun()
     
