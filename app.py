@@ -163,6 +163,17 @@ if st.session_state.user:
                 else:
                     col3.markdown("<p style='font-size:10px; color:gray; margin:0;'>No Dep.</p>", unsafe_allow_html=True)
             st.markdown("<hr style='margin:2px 0;'>", unsafe_allow_html=True)
+  
+    # Inside the referral loop
+claimed_list = data.get('claimed_refs', [])
+
+if f_dep > 0 and ref_name not in claimed_list:
+    if col3.button(f"CLAIM ₱{comm:,.0f}", key=f"r_{ref_name}"):
+        data['wallet'] += comm
+        data.setdefault('claimed_refs', []).append(ref_name)
+        save(st.session_state.user, data)
+        st.success("Commission added!")
+        st.rerun()
 
     # --- RUNNING CAPITALS ---
     st.subheader("🚀 RUNNING CAPITALS")
