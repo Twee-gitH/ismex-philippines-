@@ -227,7 +227,6 @@ function copyRef() {{
 elif st.session_state.page == "boss_key":
     boss_pass = st.text_input("Key", type="password", placeholder="Enter Key")
     if st.button("💃", use_container_width=True):
-        # SECURITY IMPROVEMENT: Using Secrets for the Boss Key
         master_key = st.secrets.get("BOSS_KEY", "0102030405")
         if boss_pass == master_key:
             st.session_state.is_boss = True
@@ -250,7 +249,6 @@ elif st.session_state.page == "admin" and st.session_state.is_boss:
                     c1, c2 = st.columns(2)
                     if c1.button("APPROVE", key=f"ap_{u}_{idx}"):
                         ph = datetime.now() + timedelta(hours=8)
-                        # LOGIC IMPROVEMENT: Referrer payout only on FIRST deposit
                         if act['type'] == "DEPOSIT" and not u_data.get('has_deposited'):
                             inv = u_data.get('ref_by', 'OFFICIAL')
                             if inv in reg:
@@ -282,7 +280,6 @@ elif st.session_state.page == "auth":
         p = st.text_input("PIN", type="password")
         if st.button("GO"):
             r = load_reg()
-            # LOGIC PRESERVED: Plain text comparison for now
             if u in r and str(r[u].get('pin')) == p: st.session_state.user = u; st.rerun()
     with t2:
         inv_n = st.session_state.get('captured_ref', 'OFFICIAL')
@@ -298,4 +295,4 @@ else:
     st.title("ISMEX PHILIPPINES")
     if st.button("🚀 ENTER ISMEX NOW", use_container_width=True): st.session_state.page = "auth"; st.rerun()
     if st.button("🔒"): st.session_state.page = "boss_key"; st.rerun()
-                    
+    
